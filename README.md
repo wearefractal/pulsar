@@ -39,7 +39,7 @@ var pulsar = new Pulsar();
 channel = pulsar.channel('test');
 channel.emit('ping', 2);
 channel.on('pong', function(num){
-  # num === 2
+  // num === 2
 });
 ```
 
@@ -74,10 +74,6 @@ resource - change to allow multiple servers for one endpoint (default: "default"
 ```javascript
 var pulsar = new Pulsar({options});
 ```
-
-## Examples
-
-You can view a chatroom example and more in the [example folder.](https://github.com/wearefractal/pulsar/tree/master/examples)
 
 ## LICENSE
 

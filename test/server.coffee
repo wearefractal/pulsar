@@ -23,14 +23,14 @@ describe 'Pulsar', ->
     it 'should call', (done) ->
       channel = serv.channel 'test'
       should.exist channel
-      channel.on 'test', (num) ->
+      channel.on 'ping', (num) ->
         num.should.equal 2
-        channel.emit 'testi', 2
+        channel.emit 'pong', 2
 
       client = getClient()
       cchan = client.channel 'test'
-      cchan.emit 'test', 2
-      cchan.on 'testi', (num) ->
+      cchan.emit 'ping', 2
+      cchan.on 'pong', (num) ->
         num.should.equal 2
         client.disconnect()
         done()
