@@ -1,0 +1,34 @@
+{
+   "name":"pulsar",
+   "description":"Events/PubSub via WebSockets",
+   "version":"0.0.1",
+   "homepage":"http://github.com/wearefractal/pulsar",
+   "repository":"git://github.com/wearefractal/pulsar.git",
+   "author":"Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
+   "main":"./index.js",
+
+   "dependencies":{
+      "coffee-script":"*",
+      "engine.io-f":"0.1.0",
+      "engine.io-client-f":"0.1.0"
+   },
+   "devDependencies":{
+      "mocha":"*",
+      "should":"*",
+      "connect":"*",
+      "browserbuild":"*",
+      "uglify-js":"*"
+   },
+   "scripts":{
+      "test":"mocha --compilers coffee:coffee-script --reporter spec"
+   },
+   "engines":{
+      "node":">= 0.4.0"
+   },
+   "licenses":[
+      {
+         "type":"MIT",
+         "url":"http://github.com/wearefractal/pulsar/raw/master/LICENSE"
+      }
+   ]
+}

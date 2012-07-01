@@ -1,0 +1,16 @@
+# compile
+rm -rf dist
+mkdir dist
+coffee -o dist -c client/*
+
+# build
+node_modules/.bin/browserbuild -g Pulsar -m Pulsar -b dist/ node_modules/engine.io-client-f/lib/* dist/* > pulsar.js
+
+# minify
+node_modules/.bin/uglifyjs -nc --unsafe -mt -o pulsar.min.js pulsar.js
+echo "File size (minified): " && cat pulsar.min.js | wc -c
+echo "File size (gzipped): " && cat pulsar.min.js | gzip -9f  | wc -c
+cp ./pulsar.js ./examples/chat/pulsar.js
+
+# clean
+rm -rf dist
