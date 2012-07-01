@@ -9,7 +9,7 @@
 </tr>
 <tr>
 <td>Description</td>
-<td>Events/PubSub via WebSockets</td>
+<td>Events + PubSub via WebSockets</td>
 </tr>
 <tr>
 <td>Node Version</td>
