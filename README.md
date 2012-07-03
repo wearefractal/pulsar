@@ -26,17 +26,17 @@ var Pulsar = require('pulsar');
 var server = http.createServer().listen(8080);
 var pulse = new Pulsar(server);
 
-channel = pulsar.channel('test');
-channel.on('ping', function (client, num) {
-  client.emit('pong', num);
+channel = pulse.channel('test');
+channel.on('ping', function (num) {
+  channel.emit('pong', num);
 });
 ```
 
 ### Client
 
 ```javascript
-var pulsar = new Pulsar();
-channel = pulsar.channel('test');
+var pulse = new Pulsar();
+channel = pulse.channel('test');
 channel.emit('ping', 2);
 channel.on('pong', function(num){
   // num === 2
@@ -55,7 +55,7 @@ resource - change to allow multiple servers for one prefix (default: "default")
 
 ```javascript
 var Pulsar = require('pulsar');
-var pulsar = new Pulsar(8080, {options});
+var pulse = new Pulsar(8080, {options});
 ```
 
 ## Client Usage
@@ -72,7 +72,7 @@ resource - change to allow multiple servers for one endpoint (default: "default"
 ```
 
 ```javascript
-var pulsar = new Pulsar({options});
+var pulse = new Pulsar({options});
 ```
 
 ## LICENSE
