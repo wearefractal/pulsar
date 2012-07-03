@@ -34,7 +34,7 @@ class Channel
     return true
 
   addListener: (event, listener) ->
-    @emit 'newListener', event, listener
+    @realEmit 'newListener', event, listener
     (@events[event]?=[]).push listener
     return @
 
