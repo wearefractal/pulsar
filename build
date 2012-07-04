@@ -4,7 +4,7 @@ mkdir dist
 coffee -o dist -c client/*
 
 # build
-node_modules/.bin/browserbuild -g Pulsar -m Pulsar -b dist/ node_modules/engine.io-client-f/lib/* dist/* > pulsar.js
+node_modules/.bin/browserbuild -g Pulsar -m Pulsar -b dist/ node_modules/engine.io-client/lib/* dist/* > pulsar.js
 
 # minify
 node_modules/.bin/uglifyjs -nc --unsafe -mt -o pulsar.min.js pulsar.js

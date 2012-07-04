@@ -1,5 +1,5 @@
 isBrowser = typeof window isnt 'undefined'
-eio = require (if isBrowser then 'node_modules/engine.io-client-f/lib/engine.io-client' else 'engine.io-client-f')
+eio = require (if isBrowser then 'node_modules/engine.io-client/lib/engine.io-client' else 'engine.io-client')
 Channel = require './Channel'
 
 class Pulsar extends eio.EventEmitter
@@ -9,7 +9,6 @@ class Pulsar extends eio.EventEmitter
       @options.port ?= (if window.location.port.length > 0 then parseInt window.location.port else 80)
       @options.secure ?= (window.location.protocol is 'https:')
 
-    @options.transports ?= ["websocket", "polling"]
     @options.path ?= '/pulsar'
     @options.forceBust ?= true
     @options.debug ?= false
@@ -19,12 +18,12 @@ class Pulsar extends eio.EventEmitter
     @socket.on 'error', @handleError
     @socket.on 'message', @handleMessage
     @socket.on 'close', @handleClose
+    @channels = {}
+    @connected = false
     return
 
-  connected: false
-
-  channels: {}
-  channel: (name) => @channels[name] ?= new Channel name, @socket
+  channel: (name) => 
+    @channels[name] ?= new Channel name, @socket
 
   disconnect: => 
     @socket.close()
@@ -33,8 +32,20 @@ class Pulsar extends eio.EventEmitter
   connect: =>
     @socket.open()
     return
-  
+
   # Event handlers
+  handleError: (err) => throw err
+  handleMessage: (msg) =>
+    try
+      {channel, event, args, action} = JSON.parse msg
+    catch e
+      @handleError err
+      return
+    chan = @channels[channel]
+    return unless chan?
+    args = [args] unless Array.isArray args
+    chan.realEmit event, args...
+
   handleOpen: =>
     @connected = true
     @emit 'open'

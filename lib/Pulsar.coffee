@@ -1,4 +1,4 @@
-engine = require 'engine.io-f'
+engine = require 'engine.io'
 Channel = require './Channel'
 
 class Pulsar
@@ -9,7 +9,9 @@ class Pulsar
     else
       @server = engine.attach hook, @options
       @server.httpServer = hook
-    return
+
+    @server.on 'connection', @handleConnection
+    @channels = {}
 
   close: =>
     @server.httpServer.close()
@@ -19,8 +21,25 @@ class Pulsar
     @server.close()
     return @
 
-  channels: {}
-  channel: (name) => @channels[name] ?= new Channel name, @server
+  channel: (name) => 
+    @channels[name] ?= new Channel name
+
+  handleConnection: (socket) => 
+    socket.on 'message', (msg) => @handleMessage socket, msg
+
+  handleMessage: (socket, msg) =>
+    try
+      {channel, event, args, action} = JSON.parse msg
+    catch e
+      return
+    chan = @channels[channel]
+    return unless chan?
+    if action?
+      return unless typeof action is 'string'
+      chan.listeners.push socket if action is 'join'
+    else if event?
+      args = [args] unless Array.isArray args
+      chan.realEmit event, args...
 
 Pulsar.Client = require '../client/Pulsar'
 module.exports = Pulsar
