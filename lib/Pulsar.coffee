@@ -37,6 +37,7 @@ class Pulsar
     if action?
       return unless typeof action is 'string'
       chan.listeners.push socket if action is 'join'
+      chan.realEmit 'newClient', socket
     else if event?
       args = [args] unless Array.isArray args
       chan.realEmit event, args...

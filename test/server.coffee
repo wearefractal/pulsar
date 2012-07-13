@@ -35,6 +35,23 @@ describe 'Pulsar', ->
         client.disconnect()
         done()
 
+    it 'should call reverse', (done) ->
+      channel = serv.channel 'test'
+      should.exist channel
+      channel.on 'pong', (num) ->
+        num.should.equal 2
+        client.disconnect()
+        done()
+
+      client = getClient()
+      cchan = client.channel 'test'
+      cchan.on 'ping', (num) ->
+        num.should.equal 2
+        cchan.emit 'pong', num
+
+      channel.on 'newClient', (socket) ->
+        channel.emit 'ping', 2
+
   describe 'multiple channels', ->
     it 'should add', (done) ->
       channel = serv.channel 'test'
