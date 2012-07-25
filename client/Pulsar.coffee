@@ -1,6 +1,6 @@
 isBrowser = typeof window isnt 'undefined'
 eio = require (if isBrowser then 'node_modules/engine.io-client/lib/engine.io-client' else 'engine.io-client')
-Channel = require './Channel'
+Channel = require '../lib/Channel'
 
 class Pulsar extends eio.EventEmitter
   constructor: (@options={}) ->

@@ -1,7 +1,11 @@
 class Channel
-  constructor: (@name) ->
+  constructor: (@name, @socket) ->
     @listeners = []
     @events = {}
+    if @socket?
+      @socket.send JSON.stringify
+        channel: @name
+        action: 'join'
 
   realEmit: (event, args...) =>
     return false unless @events[event]
@@ -9,11 +13,18 @@ class Channel
     return true
 
   emit: (event, args...) =>
-    for socket in @listeners
-      socket.send JSON.stringify
+    return false unless @socket? or @listeners?
+    if @socket?
+      @socket.send JSON.stringify
         channel: @name
         event: event
         args: args
+    else
+      for socket in @listeners
+        socket.send JSON.stringify
+          channel: @name
+          event: event
+          args: args
     return true
 
   addListener: (event, listener) =>
