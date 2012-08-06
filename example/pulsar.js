@@ -2635,6 +2635,8 @@ function ws () {
     function Channel(name, socket) {
       this.name = name;
       this.socket = socket;
+      this.runStack = __bind(this.runStack, this);
+
       this.removeAllListeners = __bind(this.removeAllListeners, this);
 
       this.removeListener = __bind(this.removeListener, this);
@@ -2648,6 +2650,7 @@ function ws () {
       this.realEmit = __bind(this.realEmit, this);
 
       this.events = {};
+      this.stack = [];
       if (this.socket) {
         this.socket.write({
           type: 'join',
@@ -2659,17 +2662,21 @@ function ws () {
     }
 
     Channel.prototype.realEmit = function() {
-      var args, event, l, _i, _len, _ref;
+      var args, event,
+        _this = this;
       event = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-      if (!this.events[event]) {
-        return false;
-      }
-      _ref = this.events[event];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        l = _ref[_i];
-        l.apply(null, args);
-      }
-      return true;
+      return this.runStack(event, args, function(nargs) {
+        var l, _i, _len, _ref;
+        if (!_this.events[event]) {
+          return false;
+        }
+        _ref = _this.events[event];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          l = _ref[_i];
+          l.apply(null, nargs);
+        }
+        return true;
+      });
     };
 
     Channel.prototype.emit = function() {
@@ -2739,6 +2746,36 @@ function ws () {
     Channel.prototype.removeAllListeners = function(event) {
       delete this.events[event];
       return this;
+    };
+
+    Channel.prototype.use = function(fn) {
+      this.stack.push(fn);
+      return this;
+    };
+
+    Channel.prototype.runStack = function(event, args, cb) {
+      var emit, idx,
+        _this = this;
+      if (this.stack.length === 0) {
+        return cb(args);
+      }
+      if (event === 'newListener') {
+        return cb(args);
+      }
+      idx = -1;
+      emit = function() {
+        var argv, next;
+        argv = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+        if (argv.length !== 0) {
+          args = argv;
+        }
+        next = _this.stack[++idx];
+        if (next == null) {
+          return cb(args);
+        }
+        return next.apply(null, [emit, event].concat(__slice.call(args)));
+      };
+      emit.apply(null, args);
     };
 
     return Channel;
