@@ -73,6 +73,21 @@ resource - change to allow multiple servers on one port (default: "default")
 var pulse = Pulsar.createClient({options});
 ```
 
+## Middleware
+
+Middleware can be added to intercept or cancel inbound events. Syntax is the same on the client and server.
+
+```javascript
+channel.use(function(emit, event, arg1, arg2, etc){
+  if (event === 'login') {
+    emit(); // Send the event on its way, emit with the same args
+  } else {
+    emit(1, 2, 3); // Send the event on its way, emit with new args
+  }
+  // Don't call emit and the event will be cancelled
+});
+```
+
 ## LICENSE
 
 (MIT License)

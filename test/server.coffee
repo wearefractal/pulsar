@@ -91,3 +91,50 @@ describe 'Pulsar', ->
         cchan2.on 'pong', (num) ->
           num.should.equal 3
           done()
+
+  describe 'middleware', ->
+    it 'should add', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+      channel.use ->
+      done()
+
+    it 'should call', (done) ->
+      called = false
+      serv = getServer()
+      channel = serv.channel 'test'
+      channel.use (emit, event, num) -> 
+        should.exist emit
+        should.exist event
+        should.exist num
+        event.should.equal 'ping'
+        num.should.equal 2
+        called = true
+        emit()
+      channel.on 'ping', (num) ->
+        num.should.equal 2
+        called.should.be.true
+        done()
+      client = getClient serv
+      cchan = client.channel 'test'
+      cchan.emit 'ping', 2
+
+    it 'should replace args', (done) ->
+      called = false
+      serv = getServer()
+      channel = serv.channel 'test'
+      channel.use (emit, event, num) -> 
+        should.exist emit
+        should.exist event
+        should.exist num
+        event.should.equal 'ping'
+        num.should.equal 2
+        called = true
+        emit 3
+      channel.on 'ping', (num) ->
+        num.should.equal 3
+        called.should.be.true
+        done()
+      client = getClient serv
+      cchan = client.channel 'test'
+      cchan.emit 'ping', 2

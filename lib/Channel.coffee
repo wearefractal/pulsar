@@ -3,6 +3,7 @@ isBrowser = typeof window isnt 'undefined'
 class Channel
   constructor: (@name, @socket) ->
     @events = {}
+    @stack = []
     if @socket
       @socket.write
         type: 'join'
@@ -11,9 +12,10 @@ class Channel
       @listeners = []
 
   realEmit: (event, args...) =>
-    return false unless @events[event]
-    l args... for l in @events[event]
-    return true
+    @runStack event, args, (nargs) =>
+      return false unless @events[event]
+      l nargs... for l in @events[event]
+      return true
 
   emit: (event, args...) =>
     msg =
@@ -53,6 +55,19 @@ class Channel
   removeAllListeners: (event) =>
     delete @events[event]
     return @
+
+  use: (fn) -> @stack.push(fn); @
+  runStack: (event, args, cb) =>
+    return cb args if @stack.length is 0
+    return cb args if event is 'newListener'
+    idx = -1
+    emit = (argv...) =>
+      args = argv unless argv.length is 0
+      next = @stack[++idx]
+      return cb args unless next?
+      next emit, event, args...
+    emit args...
+    return
 
 if isBrowser
   window.PulsarChannel = Channel
