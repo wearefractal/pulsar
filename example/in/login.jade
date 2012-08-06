@@ -1,0 +1,19 @@
+#auction
+  h1 ${auction.title}
+  img(src='${auction.image_url}')
+  br
+  span(hide='${auction.ended}') ${auction.timeRemaining | seconds}
+
+  p(show='${auction.endingSoon}') Hurry up! This auction is ending soon.
+  p(show='${auction.ended}') This auction is over.
+
+  dl
+    dt Highest Bid:
+    dd ${auction.bid | currency}
+    dt Bidder:
+    dd ${auction.bidder}
+
+#placebid
+  h2 Change bid
+  input(type="text", value='${auction.bidder}', event-keyup='${auction.svc}')
+  input(type="text", value='${auction.bid}')

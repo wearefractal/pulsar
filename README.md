@@ -24,7 +24,7 @@
 ```javascript
 var Pulsar = require('pulsar');
 var server = http.createServer().listen(8080);
-var pulse = new Pulsar(server);
+var pulse = Pulsar.createServer({server:server});
 
 channel = pulse.channel('test');
 channel.on('ping', function (num) {
@@ -35,7 +35,7 @@ channel.on('ping', function (num) {
 ### Client
 
 ```javascript
-var pulse = new Pulsar();
+var pulse = Pulsar.createClient();
 channel = pulse.channel('test');
 channel.emit('ping', 2);
 channel.on('pong', function(num){
@@ -49,13 +49,12 @@ channel.on('pong', function(num){
 
 ```
 -- Options --
-path - prefix path (default: "/pulsar")
-resource - change to allow multiple servers for one prefix (default: "default")
+resource - change to allow multiple servers on one port (default: "default")
 ```
 
 ```javascript
 var Pulsar = require('pulsar');
-var pulse = new Pulsar(8080, {options});
+var pulse = Pulsar.createServer({options});
 ```
 
 ## Client Usage
@@ -67,12 +66,11 @@ var pulse = new Pulsar(8080, {options});
 host - server location (default: window.location.hostname)
 port - server port (default: window.location.port)
 secure - use SSL (default: window.location.protocol)
-path - prefix path (default: "/pulsar")
-resource - change to allow multiple servers for one endpoint (default: "default")
+resource - change to allow multiple servers on one port (default: "default")
 ```
 
 ```javascript
-var pulse = new Pulsar({options});
+var pulse = Pulsar.createClient({options});
 ```
 
 ## LICENSE

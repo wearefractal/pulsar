@@ -1,59 +1,63 @@
 http = require 'http'
 should = require 'should'
-Server = require '../'
+Pulsar = require '../'
 {join} = require 'path'
-{Client} = Server
 
 randomPort = -> Math.floor(Math.random() * 1000) + 8000
-port = randomPort()
-serv = new Server http.createServer().listen port
-getClient = -> new Client port: port, transports: ['websocket']
+
+getServer = ->
+  Pulsar.createServer
+    server: http.createServer().listen randomPort()
+
+getClient = (server) -> 
+  Pulsar.createClient 
+    host: server.server.httpServer.address().address
+    port: server.server.httpServer.address().port
+    resource: server.options.resource
 
 describe 'Pulsar', ->
-  beforeEach ->
-    serv.channels = {}
-    serv.drop()
-
   describe 'channels', ->
     it 'should add', (done) ->
+      serv = getServer()
       channel = serv.channel 'test'
       should.exist channel
       done()
 
     it 'should call', (done) ->
+      serv = getServer()
       channel = serv.channel 'test'
       should.exist channel
       channel.on 'ping', (num) ->
         num.should.equal 2
         channel.emit 'pong', num
 
-      client = getClient()
+      client = getClient serv
       cchan = client.channel 'test'
       cchan.emit 'ping', 2
       cchan.on 'pong', (num) ->
         num.should.equal 2
-        client.disconnect()
         done()
 
     it 'should call reverse', (done) ->
+      serv = getServer()
       channel = serv.channel 'test'
       should.exist channel
       channel.on 'pong', (num) ->
         num.should.equal 2
-        client.disconnect()
         done()
 
-      client = getClient()
+      client = getClient serv
       cchan = client.channel 'test'
       cchan.on 'ping', (num) ->
         num.should.equal 2
         cchan.emit 'pong', num
 
-      channel.on 'newClient', (socket) ->
+      channel.on 'join', (socket) ->
         channel.emit 'ping', 2
 
   describe 'multiple channels', ->
     it 'should add', (done) ->
+      serv = getServer()
       channel = serv.channel 'test'
       channel2 = serv.channel 'test2'
       should.exist channel
@@ -61,6 +65,7 @@ describe 'Pulsar', ->
       done()
 
     it 'should call', (done) ->
+      serv = getServer()
       channel = serv.channel 'test'
       channel2 = serv.channel 'test2'
       should.exist channel
@@ -74,7 +79,7 @@ describe 'Pulsar', ->
         num.should.equal 3
         channel2.emit 'pong', num
 
-      client = getClient()
+      client = getClient serv
       cchan = client.channel 'test'
       cchan2 = client.channel 'test2'
 
@@ -85,5 +90,4 @@ describe 'Pulsar', ->
         cchan2.emit 'ping', 3
         cchan2.on 'pong', (num) ->
           num.should.equal 3
-          client.disconnect()
           done()

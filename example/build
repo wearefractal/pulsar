@@ -1,0 +1,2 @@
+../../jaded/bin/jaded -i in -o out -dr
+cp ../pulsar.js .

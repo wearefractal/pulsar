@@ -1,11 +1,14 @@
+isBrowser = typeof window isnt 'undefined'
+
 class Channel
   constructor: (@name, @socket) ->
-    @listeners = []
     @events = {}
-    if @socket?
-      @socket.send JSON.stringify
+    if @socket
+      @socket.write
+        type: 'join'
         channel: @name
-        action: 'join'
+    else
+      @listeners = []
 
   realEmit: (event, args...) =>
     return false unless @events[event]
@@ -13,19 +16,20 @@ class Channel
     return true
 
   emit: (event, args...) =>
-    return false unless @socket? or @listeners?
-    if @socket?
-      @socket.send JSON.stringify
-        channel: @name
-        event: event
-        args: args
+    msg =
+      type: 'emit'
+      channel: @name
+      event: event
+      args: args
+
+    if @listeners
+      socket.write msg for socket in @listeners
+      return true
+    else if @socket
+      @socket.write msg
+      return true
     else
-      for socket in @listeners
-        socket.send JSON.stringify
-          channel: @name
-          event: event
-          args: args
-    return true
+      return false
 
   addListener: (event, listener) =>
     @realEmit 'newListener', event, listener
@@ -50,4 +54,7 @@ class Channel
     delete @events[event]
     return @
 
-module.exports = Channel
+if isBrowser
+  window.PulsarChannel = Channel
+else
+  module.exports = Channel
