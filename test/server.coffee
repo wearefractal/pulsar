@@ -23,6 +23,36 @@ describe 'Pulsar', ->
       should.exist channel
       done()
 
+    it 'should emit join on server', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+      should.exist channel
+
+      client = getClient serv
+      cchan = client.channel 'test'
+
+      channel.on 'join', (socket) ->
+        done()
+
+    it 'should emit join on client', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+      should.exist channel
+
+      client = getClient serv
+      cchan = client.channel 'test'
+
+      cchan.on 'join', -> done()
+
+    it 'should call ready on client', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+      should.exist channel
+
+      client = getClient serv
+      cchan = client.channel 'test'
+      cchan.ready -> done()
+
     it 'should call', (done) ->
       serv = getServer()
       channel = serv.channel 'test'

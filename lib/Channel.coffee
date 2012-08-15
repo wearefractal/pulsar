@@ -5,10 +5,12 @@ class Channel
     @events = {}
     @stack = []
     if @socket
+      @joined = false
       @socket.write
         type: 'join'
         channel: @name
     else
+      @joined = true
       @listeners = []
 
   realEmit: (event, args...) =>
@@ -56,7 +58,13 @@ class Channel
     delete @events[event]
     return @
 
-  use: (fn) -> @stack.push(fn); @
+  ready: (fn) =>
+    if @joined
+      fn @
+    else
+      @on 'join', => fn @
+
+  use: (fn) => @stack.push(fn); @
   runStack: (event, args, cb) =>
     return cb args if @stack.length is 0
     return cb args if event is 'newListener'

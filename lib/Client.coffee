@@ -29,24 +29,29 @@ client = (opt) ->
     validate: (socket, msg, done) ->
       return done false unless typeof msg is 'object'
       return done false unless typeof msg.type is 'string'
-      if msg.type is 'emit'
-        return done false unless typeof msg.channel is 'string'
-        return done false unless typeof @channels[msg.channel]?
-        return done false unless typeof msg.event is 'string'
-        return done false unless Array.isArray msg.args
-      else
-        return done false
+      switch msg.type
+        when 'emit'
+          return done false unless typeof msg.channel is 'string'
+          return done false unless typeof @channels[msg.channel]?
+          return done false unless typeof msg.event is 'string'
+          return done false unless Array.isArray msg.args
+        when 'joined'
+          return done false unless typeof msg.channel is 'string'
+          return done false unless typeof @channels[msg.channel]?
+        else
+          return done false
       return done true
 
     error: (socket, err) -> throw err
     close: (socket, reason) -> @emit 'close', reason
     message: (socket, msg) ->
-      try
-        chan = @channels[msg.channel]
-        if msg.type is 'emit'
+      chan = @channels[msg.channel]
+      switch msg.type
+        when 'emit'
           chan.realEmit msg.event, msg.args...
-      catch err
-        @error socket, err
+        when 'joined'
+          chan.joined = true
+          chan.realEmit 'join'
 
   out.options[k]=v for k,v of opt
   return out
