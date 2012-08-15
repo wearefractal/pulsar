@@ -2637,6 +2637,10 @@ function ws () {
       this.socket = socket;
       this.runStack = __bind(this.runStack, this);
 
+      this.use = __bind(this.use, this);
+
+      this.ready = __bind(this.ready, this);
+
       this.removeAllListeners = __bind(this.removeAllListeners, this);
 
       this.removeListener = __bind(this.removeListener, this);
@@ -2652,11 +2656,13 @@ function ws () {
       this.events = {};
       this.stack = [];
       if (this.socket) {
+        this.joined = false;
         this.socket.write({
           type: 'join',
           channel: this.name
         });
       } else {
+        this.joined = true;
         this.listeners = [];
       }
     }
@@ -2748,6 +2754,17 @@ function ws () {
       return this;
     };
 
+    Channel.prototype.ready = function(fn) {
+      var _this = this;
+      if (this.joined) {
+        return fn(this);
+      } else {
+        return this.on('join', function() {
+          return fn(_this);
+        });
+      }
+    };
+
     Channel.prototype.use = function(fn) {
       this.stack.push(fn);
       return this;
@@ -2833,21 +2850,31 @@ function ws () {
         if (typeof msg.type !== 'string') {
           return done(false);
         }
-        if (msg.type === 'emit') {
-          if (typeof msg.channel !== 'string') {
+        switch (msg.type) {
+          case 'emit':
+            if (typeof msg.channel !== 'string') {
+              return done(false);
+            }
+            if (!typeof (this.channels[msg.channel] != null)) {
+              return done(false);
+            }
+            if (typeof msg.event !== 'string') {
+              return done(false);
+            }
+            if (!Array.isArray(msg.args)) {
+              return done(false);
+            }
+            break;
+          case 'joined':
+            if (typeof msg.channel !== 'string') {
+              return done(false);
+            }
+            if (!typeof (this.channels[msg.channel] != null)) {
+              return done(false);
+            }
+            break;
+          default:
             return done(false);
-          }
-          if (!typeof (this.channels[msg.channel] != null)) {
-            return done(false);
-          }
-          if (typeof msg.event !== 'string') {
-            return done(false);
-          }
-          if (!Array.isArray(msg.args)) {
-            return done(false);
-          }
-        } else {
-          return done(false);
         }
         return done(true);
       },
@@ -2859,13 +2886,13 @@ function ws () {
       },
       message: function(socket, msg) {
         var chan;
-        try {
-          chan = this.channels[msg.channel];
-          if (msg.type === 'emit') {
+        chan = this.channels[msg.channel];
+        switch (msg.type) {
+          case 'emit':
             return chan.realEmit.apply(chan, [msg.event].concat(__slice.call(msg.args)));
-          }
-        } catch (err) {
-          return this.error(socket, err);
+          case 'joined':
+            chan.joined = true;
+            return chan.realEmit('join');
         }
       }
     };
