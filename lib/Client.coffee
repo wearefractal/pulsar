@@ -14,18 +14,6 @@ client = (opt) ->
     channel: (name) -> 
       @channels[name] ?= new Channel name, @ssocket
 
-    inbound: (socket, msg, done) ->
-      try
-        done JSON.parse msg
-      catch err
-        @error socket, err
-
-    outbound: (socket, msg, done) ->
-      try
-        done JSON.stringify msg
-      catch err
-        @error socket,  err
-
     validate: (socket, msg, done) ->
       return done false unless typeof msg is 'object'
       return done false unless typeof msg.type is 'string'
@@ -43,7 +31,6 @@ client = (opt) ->
       return done true
 
     error: (socket, err) -> throw err
-    close: (socket, reason) -> @emit 'close', reason
     message: (socket, msg) ->
       chan = @channels[msg.channel]
       switch msg.type
@@ -58,5 +45,6 @@ client = (opt) ->
 
 if isBrowser
   window.Pulsar = createClient: (opt={}) -> ProtoSock.createClient client opt
+  define(->Pulsar) if typeof define is 'function'
 else
   module.exports = client
