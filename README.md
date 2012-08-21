@@ -78,7 +78,7 @@ var pulse = Pulsar.createClient({options});
 Middleware can be added to intercept or cancel inbound events. Syntax is the same on the client and server.
 
 ```javascript
-channel.use(function(emit, event, arg1, arg2, etc){
+channel.use(function(emit, event, args...){
   if (event === 'login') {
     emit(); // Send the event on its way, emit with the same args
   } else {

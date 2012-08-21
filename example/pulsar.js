@@ -2521,12 +2521,6 @@ Transport.prototype.onClose = function () {
 
   window.ProtoSock = ps;
 
-  if (typeof define === 'function') {
-    define(function() {
-      return ProtoSock;
-    });
-  }
-
 }).call(this);
 
 });require.register("util.js", function(module, exports, require, global){
@@ -2918,11 +2912,6 @@ Transport.prototype.onClose = function () {
         return ProtoSock.createClient(client(opt));
       }
     };
-    if (typeof define === 'function') {
-      define(function() {
-        return Pulsar;
-      });
-    }
   } else {
     module.exports = client;
   }

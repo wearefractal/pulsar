@@ -36,7 +36,8 @@ module.exports = (opt) ->
     message: (socket, msg) ->
       chan = @channels[msg.channel]
       switch msg.type
-        when'emit'
+        when 'emit'
+          chan.emit msg.event, msg.args...
           chan.realEmit msg.event, msg.args...
         when 'join'
           # TODO: Pass an eventemitter instead of socket

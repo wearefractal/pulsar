@@ -45,6 +45,6 @@ client = (opt) ->
 
 if isBrowser
   window.Pulsar = createClient: (opt={}) -> ProtoSock.createClient client opt
-  define(->Pulsar) if typeof define is 'function'
+  #define(->Pulsar) if typeof define is 'function'
 else
   module.exports = client

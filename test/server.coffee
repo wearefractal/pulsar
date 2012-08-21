@@ -3,7 +3,7 @@ should = require 'should'
 Pulsar = require '../'
 {join} = require 'path'
 
-randomPort = -> Math.floor(Math.random() * 1000) + 8000
+randomPort = -> Math.floor(Math.random() * 2000) + 8000
 
 getServer = ->
   Pulsar.createServer
@@ -121,6 +121,27 @@ describe 'Pulsar', ->
         cchan2.on 'pong', (num) ->
           num.should.equal 3
           done()
+
+  describe 'multiple clients', ->
+    it 'should broadcast to eachother', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+      should.exist channel
+
+      client = getClient serv
+      client2 = getClient serv
+      cchan = client.channel 'test'
+      cchan2 = client2.channel 'test'
+
+      cchan2.on 'ping', (num) ->
+        num.should.equal 2
+        channel.emit 'pong', num
+
+      cchan.on 'pong', (num) ->
+        num.should.equal 2
+        done()
+
+      cchan.emit 'ping', 2
 
   describe 'middleware', ->
     it 'should add', (done) ->
