@@ -17,6 +17,8 @@
 </tr>
 </table>
 
+Pulsar uses ES5 features so be sure to include es5shim on your page.
+
 ## Example
 
 ### Server
