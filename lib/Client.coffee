@@ -30,7 +30,7 @@ client = (opt) ->
           return done false
       return done true
 
-    error: (socket, err) -> throw err
+    error: (socket, err) -> @emit 'error', err, socket
     message: (socket, msg) ->
       chan = @channels[msg.channel]
       switch msg.type

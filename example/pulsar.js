@@ -2357,6 +2357,14 @@ Transport.prototype.onClose = function () {
       this.parent.outbound(this, msg, function(formatted) {
         return _this.send(formatted);
       });
+      /*
+          @parent.outbound @, msg, (formatted) =>
+            if @connected is true
+              @send formatted
+            else
+              (@buffer?=[]).push formatted
+      */
+
       return this;
     },
     disconnect: function() {
@@ -2472,7 +2480,23 @@ Transport.prototype.onClose = function () {
     Client.prototype.handleClose = function(reason) {
       this.emit('close', this.ssocket, reason);
       return this.close(this.ssocket, reason);
+      /*
+          @reconnect (worked) =>
+            return if worked
+            @emit 'close', @ssocket, reason
+            @close @ssocket, reason
+      */
+
     };
+
+    /*
+      reconnect: (cb) =>
+        attempts = 0
+        connect = =>
+          ++attempts
+          return cb false if attempts is 10
+    */
+
 
     return Client;
 
@@ -2605,14 +2629,14 @@ Transport.prototype.onClose = function () {
       try {
         return done(JSON.parse(msg));
       } catch (e) {
-        return this.error(e);
+        return this.error(socket, e);
       }
     },
     outbound: function(socket, msg, done) {
       try {
         return done(JSON.stringify(msg));
       } catch (e) {
-        return this.error(e);
+        return this.error(socket, e);
       }
     },
     validate: function(socket, msg, done) {
@@ -2640,6 +2664,10 @@ Transport.prototype.onClose = function () {
     port: (window.location.port.length > 0 ? parseInt(window.location.port) : 80),
     secure: window.location.protocol === 'https:'
   };
+
+  if (def.options.secure) {
+    def.options.port = 443;
+  }
 
   module.exports = def;
 
@@ -2890,7 +2918,7 @@ Transport.prototype.onClose = function () {
         return done(true);
       },
       error: function(socket, err) {
-        throw err;
+        return this.emit('error', err, socket);
       },
       message: function(socket, msg) {
         var chan;
