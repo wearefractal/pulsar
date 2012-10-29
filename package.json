@@ -1,7 +1,7 @@
 {
    "name":"pulsar",
    "description":"Events/PubSub via WebSockets",
-   "version":"0.1.4",
+   "version":"0.1.5",
    "homepage":"http://github.com/wearefractal/pulsar",
    "repository":"git://github.com/wearefractal/pulsar.git",
    "author":"Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
@@ -9,7 +9,7 @@
 
    "dependencies":{
       "coffee-script":"*",
-      "protosock":"0.0.8"
+      "protosock":"0.0.9"
    },
    "devDependencies":{
       "mocha":"*",
