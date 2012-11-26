@@ -1,13 +1,14 @@
 Pulsar = require '../'
 connect = require 'connect'
+{join} = require 'path'
 
 # Web Server
 app = connect()
-app.use connect.static __dirname
-server = app.listen 8081
+app.use connect.static join __dirname, './public'
+server = app.listen 8080
 
 # Events
-pulse = Pulsar.createServer({server:server});
+pulse = Pulsar.createServer(server);
 auction = pulse.channel 'auction'
 
 auction.on 'bid', (bid) ->
@@ -28,3 +29,5 @@ changeTime = ->
     auction.emit 'ended', true
 
 changeTime()
+
+console.log "Listening on 8080"

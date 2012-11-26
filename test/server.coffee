@@ -6,8 +6,7 @@ Pulsar = require '../'
 randomPort = -> Math.floor(Math.random() * 2000) + 8000
 
 getServer = ->
-  Pulsar.createServer
-    server: http.createServer().listen randomPort()
+  Pulsar.createServer http.createServer().listen randomPort()
 
 getClient = (server) -> 
   Pulsar.createClient 

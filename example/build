@@ -1,2 +1,2 @@
-../../jaded/bin/jaded -i in -o out -dr
-cp ../pulsar.js .
+../../jaded/bin/jaded -i in -o ./public -dr
+cp ../pulsar.js ./public
