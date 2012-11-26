@@ -26,7 +26,7 @@ Pulsar uses ES5 features so be sure to include es5shim on your page.
 ```javascript
 var Pulsar = require('pulsar');
 var server = http.createServer().listen(8080);
-var pulse = Pulsar.createServer({server:server});
+var pulse = Pulsar.createServer(server);
 
 channel = pulse.channel('test');
 channel.on('ping', function (num) {
@@ -56,7 +56,7 @@ resource - change to allow multiple servers on one port (default: "default")
 
 ```javascript
 var Pulsar = require('pulsar');
-var pulse = Pulsar.createServer({options});
+var pulse = Pulsar.createServer(httpServer, {options});
 ```
 
 ## Client Usage
