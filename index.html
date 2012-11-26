@@ -7,6 +7,7 @@
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
@@ -15,17 +16,18 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1>Pulsar</h1>
-        <p>Events/PubSub via WebSockets</p>
-
-        <p class="view"><a href="https://github.com/wearefractal/pulsar">View the Project on GitHub <small>wearefractal/pulsar</small></a></p>
-
+        <h1 class="header">Pulsar</h1>
+        <p class="header">Events/PubSub via WebSockets</p>
 
         <ul>
-          <li><a href="https://github.com/wearefractal/pulsar/zipball/master">Download <strong>ZIP File</strong></a></li>
-          <li><a href="https://github.com/wearefractal/pulsar/tarball/master">Download <strong>TAR Ball</strong></a></li>
-          <li><a href="https://github.com/wearefractal/pulsar">View On <strong>GitHub</strong></a></li>
+          <li class="download"><a class="buttons" href="https://github.com/wearefractal/pulsar/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/wearefractal/pulsar/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/wearefractal/pulsar">View On GitHub</a></li>
         </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/wearefractal">wearefractal</a></p>
+
+
       </header>
       <section>
         <p><img src="https://secure.travis-ci.org/wearefractal/pulsar.png?branch=master" alt="status"></p>
@@ -43,15 +45,17 @@
 </tr>
 <tr>
 <td>Node Version</td>
-<td>&gt;= 0.4</td>
+<td>&gt;= 0.6</td>
 </tr>
-</table><h2>Example</h2>
+</table><p>Pulsar uses ES5 features so be sure to include es5shim on your page.</p>
+
+<h2>Example</h2>
 
 <h3>Server</h3>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">Pulsar</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'pulsar'</span><span class="p">);</span>
 <span class="kd">var</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">http</span><span class="p">.</span><span class="nx">createServer</span><span class="p">().</span><span class="nx">listen</span><span class="p">(</span><span class="mi">8080</span><span class="p">);</span>
-<span class="kd">var</span> <span class="nx">pulse</span> <span class="o">=</span> <span class="nx">Pulsar</span><span class="p">.</span><span class="nx">createServer</span><span class="p">({</span><span class="nx">server</span><span class="o">:</span><span class="nx">server</span><span class="p">});</span>
+<span class="kd">var</span> <span class="nx">pulse</span> <span class="o">=</span> <span class="nx">Pulsar</span><span class="p">.</span><span class="nx">createServer</span><span class="p">(</span><span class="nx">server</span><span class="p">);</span>
 
 <span class="nx">channel</span> <span class="o">=</span> <span class="nx">pulse</span><span class="p">.</span><span class="nx">channel</span><span class="p">(</span><span class="s1">'test'</span><span class="p">);</span>
 <span class="nx">channel</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'ping'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">num</span><span class="p">)</span> <span class="p">{</span>
@@ -78,7 +82,7 @@ resource - change to allow multiple servers on one port (default: "default")
 </code></pre>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">Pulsar</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'pulsar'</span><span class="p">);</span>
-<span class="kd">var</span> <span class="nx">pulse</span> <span class="o">=</span> <span class="nx">Pulsar</span><span class="p">.</span><span class="nx">createServer</span><span class="p">({</span><span class="nx">options</span><span class="p">});</span>
+<span class="kd">var</span> <span class="nx">pulse</span> <span class="o">=</span> <span class="nx">Pulsar</span><span class="p">.</span><span class="nx">createServer</span><span class="p">(</span><span class="nx">httpServer</span><span class="p">,</span> <span class="p">{</span><span class="nx">options</span><span class="p">});</span>
 </pre></div>
 
 <h2>Client Usage</h2>
@@ -93,6 +97,20 @@ resource - change to allow multiple servers on one port (default: "default")
 </code></pre>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">pulse</span> <span class="o">=</span> <span class="nx">Pulsar</span><span class="p">.</span><span class="nx">createClient</span><span class="p">({</span><span class="nx">options</span><span class="p">});</span>
+</pre></div>
+
+<h2>Middleware</h2>
+
+<p>Middleware can be added to intercept or cancel inbound events. Syntax is the same on the client and server.</p>
+
+<div class="highlight"><pre><span class="nx">channel</span><span class="p">.</span><span class="nx">use</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">emit</span><span class="p">,</span> <span class="nx">event</span><span class="p">,</span> <span class="nx">args</span><span class="p">...){</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">event</span> <span class="o">===</span> <span class="s1">'login'</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">emit</span><span class="p">();</span> <span class="c1">// Send the event on its way, emit with the same args</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nx">emit</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span> <span class="c1">// Send the event on its way, emit with new args</span>
+  <span class="p">}</span>
+  <span class="c1">// Don't call emit and the event will be cancelled</span>
+<span class="p">});</span>
 </pre></div>
 
 <h2>LICENSE</h2>
@@ -121,11 +139,10 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
       </section>
       <footer>
-        <p>This project is maintained by <a href="https://github.com/wearefractal">wearefractal</a></p>
-        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
       </footer>
     </div>
-    <script src="javascripts/scale.fix.js"></script>
-    
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
   </body>
 </html>
