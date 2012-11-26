@@ -84,6 +84,31 @@ describe 'Pulsar', ->
       channel.on 'join', (socket) ->
         channel.emit 'ping', 2
 
+    it 'should join', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+
+      client = getClient serv
+      cchan = client.channel 'test'
+      cchan.ready ->
+        channel.listeners.length.should.equal 1
+        channel.listeners[0].id.should.equal cchan.socket.id
+        done()
+
+    it 'should unjoin on close', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+
+      client = getClient serv
+      cchan = client.channel 'test'
+      cchan.ready ->
+        channel.listeners.length.should.equal 1
+        channel.listeners[0].id.should.equal cchan.socket.id
+        channel.listeners[0].on 'close', ->
+          channel.listeners.length.should.equal 0
+          done()
+        client.disconnect()
+
   describe 'multiple channels', ->
     it 'should add', (done) ->
       serv = getServer()
@@ -132,15 +157,18 @@ describe 'Pulsar', ->
       cchan = client.channel 'test'
       cchan2 = client2.channel 'test'
 
-      cchan2.on 'ping', (num) ->
-        num.should.equal 2
-        channel.emit 'pong', num
+      cchan.ready ->
+        cchan2.ready ->
 
-      cchan.on 'pong', (num) ->
-        num.should.equal 2
-        done()
+          cchan2.on 'ping', (num) ->
+            num.should.equal 2
+            channel.emit 'pong', num
 
-      cchan.emit 'ping', 2
+          cchan.on 'pong', (num) ->
+            num.should.equal 2
+            done()
+
+          cchan.emit 'ping', 2
 
   describe 'middleware', ->
     it 'should add', (done) ->

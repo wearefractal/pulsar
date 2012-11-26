@@ -2855,6 +2855,26 @@ Transport.prototype.onClose = function () {
       return this;
     };
 
+    Channel.prototype.removeSocketListener = function(listener) {
+      var l;
+      if (!this.listeners) {
+        return this;
+      }
+      this.listeners = (function() {
+        var _i, _len, _ref, _results;
+        _ref = this.listeners;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          l = _ref[_i];
+          if (l !== listener) {
+            _results.push(l);
+          }
+        }
+        return _results;
+      }).call(this);
+      return this;
+    };
+
     Channel.prototype.removeListener = function(event, listener) {
       var l;
       if (!this.events[event]) {

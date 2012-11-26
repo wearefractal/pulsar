@@ -41,10 +41,11 @@ module.exports =
       when 'join'
         # TODO: Pass an eventemitter instead of socket
         chan.listeners.push socket
+        socket.on 'close', -> chan.removeSocketListener socket
         chan.realEmit 'join', socket
         socket.write
           type: 'joined'
           channel: msg.channel
       when 'unjoin'
-        # TODO: remove socket from chan.listeners
+        chan.removeSocketListener socket
         chan.realEmit 'unjoin', socket

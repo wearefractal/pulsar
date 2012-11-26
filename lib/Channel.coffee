@@ -49,6 +49,11 @@ class Channel
     @on event, fn
     return @
 
+  removeSocketListener: (listener) ->
+    return @ unless @listeners
+    @listeners = (l for l in @listeners when l isnt listener)
+    return @
+
   removeListener: (event, listener) =>
     return @ unless @events[event]
     @events[event] = (l for l in @events[event] when l isnt listener)
