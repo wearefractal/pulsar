@@ -1,7 +1,7 @@
 {
    "name":"pulsar",
    "description":"Events/PubSub via WebSockets",
-   "version":"0.1.7",
+   "version":"0.1.8",
    "homepage":"http://github.com/wearefractal/pulsar",
    "repository":"git://github.com/wearefractal/pulsar.git",
    "author":"Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
