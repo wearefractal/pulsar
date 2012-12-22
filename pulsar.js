@@ -1,4 +1,333 @@
-(function(){var global = this;function debug(){return debug};function require(p, parent){ var path = require.resolve(p) , mod = require.modules[path]; if (!mod) throw new Error('failed to require "' + p + '" from ' + parent); if (!mod.exports) { mod.exports = {}; mod.call(mod.exports, mod, mod.exports, require.relative(path), global); } return mod.exports;}require.modules = {};require.resolve = function(path){ var orig = path , reg = path + '.js' , index = path + '/index.js'; return require.modules[reg] && reg || require.modules[index] && index || orig;};require.register = function(path, fn){ require.modules[path] = fn;};require.relative = function(parent) { return function(p){ if ('debug' == p) return debug; if ('.' != p.charAt(0)) return require(p); var path = parent.split('/') , segs = p.split('/'); path.pop(); for (var i = 0; i < segs.length; i++) { var seg = segs[i]; if ('..' == seg) path.pop(); else if ('.' != seg) path.push(seg); } return require(path.join('/'), parent); };};require.register("node_modules/engine.io-client/lib/engine.io-client.js", function(module, exports, require, global){
+(function(){var global = this;function debug(){return debug};function require(p, parent){ var path = require.resolve(p) , mod = require.modules[path]; if (!mod) throw new Error('failed to require "' + p + '" from ' + parent); if (!mod.exports) { mod.exports = {}; mod.call(mod.exports, mod, mod.exports, require.relative(path), global); } return mod.exports;}require.modules = {};require.resolve = function(path){ var orig = path , reg = path + '.js' , index = path + '/index.js'; return require.modules[reg] && reg || require.modules[index] && index || orig;};require.register = function(path, fn){ require.modules[path] = fn;};require.relative = function(parent) { return function(p){ if ('debug' == p) return debug; if ('.' != p.charAt(0)) return require(p); var path = parent.split('/') , segs = p.split('/'); path.pop(); for (var i = 0; i < segs.length; i++) { var seg = segs[i]; if ('..' == seg) path.pop(); else if ('.' != seg) path.push(seg); } return require(path.join('/'), parent); };};require.register("Client.js", function(module, exports, require, global){
+(function() {
+  var Client, EventEmitter, engineClient, getDelay, isBrowser, util,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  util = require('./util');
+
+  isBrowser = util.isBrowser();
+
+  if (isBrowser) {
+    engineClient = require('node_modules/engine.io-client/lib/engine.io-client');
+    EventEmitter = engineClient.EventEmitter;
+  } else {
+    engineClient = require('engine.io-client');
+    EventEmitter = require('events').EventEmitter;
+  }
+
+  util.extendSocket(engineClient.Socket);
+
+  getDelay = function(a) {
+    if (a > 10) {
+      return 15000;
+    } else if (a > 5) {
+      return 5000;
+    } else if (a > 3) {
+      return 1000;
+    }
+    return 1000;
+  };
+
+  Client = (function(_super) {
+
+    __extends(Client, _super);
+
+    function Client(plugin, options) {
+      var eiopts, k, v, _base, _base2;
+      if (options == null) options = {};
+      this.reconnect = __bind(this.reconnect, this);
+      this.handleClose = __bind(this.handleClose, this);
+      this.handleError = __bind(this.handleError, this);
+      this.handleMessage = __bind(this.handleMessage, this);
+      this.handleConnection = __bind(this.handleConnection, this);
+      for (k in plugin) {
+        v = plugin[k];
+        this[k] = v;
+      }
+      for (k in options) {
+        v = options[k];
+        this.options[k] = v;
+      }
+      if ((_base = this.options).reconnect == null) _base.reconnect = true;
+      if ((_base2 = this.options).reconnectLimit == null) {
+        _base2.reconnectLimit = Infinity;
+      }
+      this.isServer = false;
+      this.isClient = true;
+      this.isBrowser = isBrowser;
+      eiopts = {
+        host: this.options.host,
+        port: this.options.port,
+        secure: this.options.secure,
+        path: "/" + this.options.namespace,
+        resource: this.options.resource,
+        transports: this.options.transports,
+        upgrade: this.options.upgrade,
+        flashPath: this.options.flashPath,
+        policyPort: this.options.policyPort,
+        forceJSONP: this.options.forceJSONP,
+        forceBust: this.options.forceBust,
+        debug: this.options.debug
+      };
+      this.ssocket = new engineClient.Socket(eiopts);
+      this.ssocket.parent = this;
+      this.ssocket.once('open', this.handleConnection);
+      this.ssocket.on('error', this.handleError);
+      this.ssocket.on('message', this.handleMessage);
+      this.ssocket.on('close', this.handleClose);
+      this.start();
+      return;
+    }
+
+    Client.prototype.disconnect = function() {
+      this.ssocket.disconnect();
+      return this;
+    };
+
+    Client.prototype.handleConnection = function() {
+      this.emit('connected');
+      return this.connect(this.ssocket);
+    };
+
+    Client.prototype.handleMessage = function(msg) {
+      var _this = this;
+      this.emit('inbound', this.ssocket, msg);
+      return this.inbound(this.ssocket, msg, function(formatted) {
+        return _this.validate(_this.ssocket, formatted, function(valid) {
+          if (valid) {
+            _this.emit('message', _this.ssocket, formatted);
+            return _this.message(_this.ssocket, formatted);
+          } else {
+            _this.emit('invalid', _this.ssocket, formatted);
+            return _this.invalid(_this.ssocket, formatted);
+          }
+        });
+      });
+    };
+
+    Client.prototype.handleError = function(err) {
+      if (typeof err === 'string') err = new Error(err);
+      return this.error(this.ssocket, err);
+    };
+
+    Client.prototype.handleClose = function(reason) {
+      var _this = this;
+      if (this.ssocket.reconnecting) return;
+      if (this.options.reconnect) {
+        return this.reconnect(function(err) {
+          if (err == null) return;
+          _this.emit('close', _this.ssocket, reason);
+          return _this.close(_this.ssocket, reason);
+        });
+      } else {
+        this.emit('close', this.ssocket, reason);
+        return this.close(this.ssocket, reason);
+      }
+    };
+
+    Client.prototype.reconnect = function(cb) {
+      var attempts, connect, done, err, maxAttempts,
+        _this = this;
+      cb || (cb = function() {});
+      if (this.ssocket.reconnecting) return cb("Already reconnecting");
+      this.ssocket.reconnecting = true;
+      if (this.ssocket.readyState === 'open') this.ssocket.disconnect();
+      maxAttempts = this.options.reconnectLimit;
+      attempts = 0;
+      done = function() {
+        _this.ssocket.reconnecting = false;
+        _this.handleConnection(_this.ssocket);
+        return cb();
+      };
+      err = function(e) {
+        _this.ssocket.reconnecting = false;
+        return cb(e);
+      };
+      this.ssocket.once('open', done);
+      connect = function() {
+        if (!_this.ssocket.reconnecting) return;
+        if (attempts >= maxAttempts) return err("Exceeded max attempts");
+        attempts++;
+        _this.ssocket.open();
+        return setTimeout(connect, getDelay(attempts));
+      };
+      return setTimeout(connect, getDelay(attempts));
+    };
+
+    return Client;
+
+  })(EventEmitter);
+
+  module.exports = Client;
+
+}).call(this);
+
+});require.register("Socket.js", function(module, exports, require, global){
+(function() {
+
+  module.exports = {
+    write: function(msg) {
+      var _this = this;
+      this.parent.outbound(this, msg, function(fmt) {
+        return _this.send(fmt);
+      });
+      return this;
+    },
+    disconnect: function(r) {
+      this.close(r);
+      return this;
+    }
+  };
+
+}).call(this);
+
+});require.register("defaultClient.js", function(module, exports, require, global){
+(function() {
+  var def;
+
+  def = {
+    options: {},
+    start: function() {},
+    inbound: function(socket, msg, done) {
+      var parsed;
+      try {
+        parsed = JSON.parse(msg);
+      } catch (e) {
+        this.error(socket, e);
+      }
+      done(parsed);
+      return done;
+    },
+    outbound: function(socket, msg, done) {
+      var parsed;
+      try {
+        parsed = JSON.stringify(msg);
+      } catch (e) {
+        this.error(socket, e);
+      }
+      done(parsed);
+    },
+    validate: function(socket, msg, done) {
+      return done(true);
+    },
+    invalid: function() {},
+    connect: function() {},
+    message: function() {},
+    error: function() {},
+    close: function() {}
+  };
+
+
+
+
+
+
+
+
+
+  def.options = {
+    host: window.location.hostname,
+    port: (window.location.port.length > 0 ? parseInt(window.location.port) : 80),
+    secure: window.location.protocol === 'https:'
+  };
+
+  if (def.options.secure) def.options.port = 443;
+
+  module.exports = def;
+
+}).call(this);
+
+});require.register("main.js", function(module, exports, require, global){
+(function() {
+  var ps, util;
+
+  util = require('./util');
+
+  ps = {
+    createClientWrapper: function(plugin) {
+      return function(opt) {
+        return ps.createClient(plugin, opt);
+      };
+    },
+    createClient: function(plugin, opt) {
+      var Client, defaultClient, newPlugin;
+      Client = require('./Client');
+      defaultClient = require('./defaultClient');
+      newPlugin = util.mergePlugins(defaultClient, plugin);
+      return new Client(newPlugin, opt);
+    }
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  window.ProtoSock = ps;
+
+}).call(this);
+
+});require.register("util.js", function(module, exports, require, global){
+(function() {
+  var util,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
+    __slice = Array.prototype.slice;
+
+  module.exports = util = {
+    extendSocket: function(Socket) {
+      var nu;
+      nu = require('./Socket');
+      return __extends(Socket.prototype, nu);
+    },
+    mergePlugins: function() {
+      var args, k, newPlugin, plugin, v, _i, _len;
+      args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      newPlugin = {};
+      for (_i = 0, _len = args.length; _i < _len; _i++) {
+        plugin = args[_i];
+        for (k in plugin) {
+          v = plugin[k];
+          if (typeof v === 'object' && k !== 'server') {
+            newPlugin[k] = util.mergePlugins(newPlugin[k], v);
+          } else {
+            newPlugin[k] = v;
+          }
+        }
+      }
+      return newPlugin;
+    },
+    isBrowser: function() {
+
+
+      return true;
+    }
+  };
+
+}).call(this);
+
+});require.register("node_modules/engine.io-client/lib/engine.io-client.js", function(module, exports, require, global){
 
 /**
  * Client version.
@@ -2455,376 +2784,12 @@ exports.qs = function (obj) {
   return str;
 };
 
-});require.register("Client.js", function(module, exports, require, global){
-// Generated by CoffeeScript 1.4.0
-(function() {
-  var Client, EventEmitter, engineClient, getDelay, isBrowser, util,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  util = require('./util');
-
-  isBrowser = util.isBrowser();
-
-  if (isBrowser) {
-    engineClient = require('node_modules/engine.io-client/lib/engine.io-client');
-    EventEmitter = engineClient.EventEmitter;
-  } else {
-    engineClient = require('engine.io-client');
-    EventEmitter = require('events').EventEmitter;
-  }
-
-  util.extendSocket(engineClient.Socket);
-
-  getDelay = function(a) {
-    if (a > 10) {
-      return 15000;
-    } else if (a > 5) {
-      return 5000;
-    } else if (a > 3) {
-      return 1000;
-    }
-    return 1000;
-  };
-
-  Client = (function(_super) {
-
-    __extends(Client, _super);
-
-    function Client(plugin, options) {
-      var eiopts, k, v, _base, _base1, _ref, _ref1;
-      if (options == null) {
-        options = {};
-      }
-      this.reconnect = __bind(this.reconnect, this);
-
-      this.handleClose = __bind(this.handleClose, this);
-
-      this.handleError = __bind(this.handleError, this);
-
-      this.handleMessage = __bind(this.handleMessage, this);
-
-      this.handleConnection = __bind(this.handleConnection, this);
-
-      for (k in plugin) {
-        v = plugin[k];
-        this[k] = v;
-      }
-      for (k in options) {
-        v = options[k];
-        this.options[k] = v;
-      }
-      if ((_ref = (_base = this.options).reconnect) == null) {
-        _base.reconnect = true;
-      }
-      if ((_ref1 = (_base1 = this.options).reconnectLimit) == null) {
-        _base1.reconnectLimit = Infinity;
-      }
-      this.isServer = false;
-      this.isClient = true;
-      this.isBrowser = isBrowser;
-      eiopts = {
-        host: this.options.host,
-        port: this.options.port,
-        secure: this.options.secure,
-        path: "/" + this.options.namespace,
-        resource: this.options.resource,
-        transports: this.options.transports,
-        upgrade: this.options.upgrade,
-        flashPath: this.options.flashPath,
-        policyPort: this.options.policyPort,
-        forceJSONP: this.options.forceJSONP,
-        forceBust: this.options.forceBust,
-        debug: this.options.debug
-      };
-      this.ssocket = new engineClient.Socket(eiopts);
-      this.ssocket.parent = this;
-      this.ssocket.once('open', this.handleConnection);
-      this.ssocket.on('error', this.handleError);
-      this.ssocket.on('message', this.handleMessage);
-      this.ssocket.on('close', this.handleClose);
-      this.start();
-      return;
-    }
-
-    Client.prototype.disconnect = function() {
-      this.ssocket.disconnect();
-      return this;
-    };
-
-    Client.prototype.handleConnection = function() {
-      this.emit('connected');
-      return this.connect(this.ssocket);
-    };
-
-    Client.prototype.handleMessage = function(msg) {
-      var _this = this;
-      this.emit('inbound', this.ssocket, msg);
-      return this.inbound(this.ssocket, msg, function(formatted) {
-        return _this.validate(_this.ssocket, formatted, function(valid) {
-          if (valid) {
-            _this.emit('message', _this.ssocket, formatted);
-            return _this.message(_this.ssocket, formatted);
-          } else {
-            _this.emit('invalid', _this.ssocket, formatted);
-            return _this.invalid(_this.ssocket, formatted);
-          }
-        });
-      });
-    };
-
-    Client.prototype.handleError = function(err) {
-      if (typeof err === 'string') {
-        err = new Error(err);
-      }
-      return this.error(this.ssocket, err);
-    };
-
-    Client.prototype.handleClose = function(reason) {
-      var _this = this;
-      if (this.ssocket.reconnecting) {
-        return;
-      }
-      if (this.options.reconnect) {
-        return this.reconnect(function(err) {
-          if (err == null) {
-            return;
-          }
-          _this.emit('close', _this.ssocket, reason);
-          return _this.close(_this.ssocket, reason);
-        });
-      } else {
-        this.emit('close', this.ssocket, reason);
-        return this.close(this.ssocket, reason);
-      }
-    };
-
-    Client.prototype.reconnect = function(cb) {
-      var attempts, connect, done, err, maxAttempts,
-        _this = this;
-      if (this.ssocket.reconnecting) {
-        return cb("Already reconnecting");
-      }
-      this.ssocket.reconnecting = true;
-      if (this.ssocket.readyState === 'open') {
-        this.ssocket.disconnect();
-      }
-      maxAttempts = this.options.reconnectLimit;
-      attempts = 0;
-      done = function() {
-        _this.ssocket.reconnecting = false;
-        return cb();
-      };
-      err = function(e) {
-        _this.ssocket.reconnecting = false;
-        return cb(e);
-      };
-      this.ssocket.once('open', done);
-      connect = function() {
-        if (!_this.ssocket.reconnecting) {
-          return;
-        }
-        if (attempts >= maxAttempts) {
-          return err("Exceeded max attempts");
-        }
-        attempts++;
-        _this.ssocket.open();
-        return setTimeout(connect, getDelay(attempts));
-      };
-      return setTimeout(connect, getDelay(attempts));
-    };
-
-    return Client;
-
-  })(EventEmitter);
-
-  module.exports = Client;
-
-}).call(this);
-
-});require.register("defaultClient.js", function(module, exports, require, global){
-// Generated by CoffeeScript 1.4.0
-(function() {
-  var def;
-
-  def = {
-    options: {},
-    start: function() {},
-    inbound: function(socket, msg, done) {
-      var parsed;
-      try {
-        parsed = JSON.parse(msg);
-      } catch (e) {
-        this.error(socket, e);
-      }
-      done(parsed);
-      return done;
-    },
-    outbound: function(socket, msg, done) {
-      var parsed;
-      try {
-        parsed = JSON.stringify(msg);
-      } catch (e) {
-        this.error(socket, e);
-      }
-      done(parsed);
-    },
-    validate: function(socket, msg, done) {
-      return done(true);
-    },
-    invalid: function() {},
-    connect: function() {},
-    message: function() {},
-    error: function() {},
-    close: function() {}
-  };
-
-
-
-
-
-
-
-
-
-
-
-  def.options = {
-    host: window.location.hostname,
-    port: (window.location.port.length > 0 ? parseInt(window.location.port) : 80),
-    secure: window.location.protocol === 'https:'
-  };
-
-  if (def.options.secure) {
-    def.options.port = 443;
-  }
-
-  module.exports = def;
-
-}).call(this);
-
-});require.register("main.js", function(module, exports, require, global){
-// Generated by CoffeeScript 1.4.0
-(function() {
-  var ps, util;
-
-  util = require('./util');
-
-  ps = {
-    createClientWrapper: function(plugin) {
-      return function(opt) {
-        return ps.createClient(plugin, opt);
-      };
-    },
-    createClient: function(plugin, opt) {
-      var Client, defaultClient, newPlugin;
-      Client = require('./Client');
-      defaultClient = require('./defaultClient');
-      newPlugin = util.mergePlugins(defaultClient, plugin);
-      return new Client(newPlugin, opt);
-    }
-  };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  window.ProtoSock = ps;
-
-}).call(this);
-
-});require.register("Socket.js", function(module, exports, require, global){
-// Generated by CoffeeScript 1.4.0
-(function() {
-
-  module.exports = {
-    write: function(msg) {
-      var _this = this;
-      this.parent.outbound(this, msg, function(fmt) {
-        return _this.send(fmt);
-      });
-      return this;
-    },
-    disconnect: function(r) {
-      this.close(r);
-      return this;
-    }
-  };
-
-}).call(this);
-
-});require.register("util.js", function(module, exports, require, global){
-// Generated by CoffeeScript 1.4.0
-(function() {
-  var util,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __slice = [].slice;
-
-  module.exports = util = {
-    extendSocket: function(Socket) {
-      var nu;
-      nu = require('./Socket');
-      return __extends(Socket.prototype, nu);
-    },
-    mergePlugins: function() {
-      var args, k, newPlugin, plugin, v, _i, _len;
-      args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-      newPlugin = {};
-      for (_i = 0, _len = args.length; _i < _len; _i++) {
-        plugin = args[_i];
-        for (k in plugin) {
-          v = plugin[k];
-          if (typeof v === 'object' && k !== 'server') {
-            newPlugin[k] = util.mergePlugins(newPlugin[k], v);
-          } else {
-            newPlugin[k] = v;
-          }
-        }
-      }
-      return newPlugin;
-    },
-    isBrowser: function() {
-
-
-
-
-      return true;
-    }
-  };
-
-}).call(this);
-
-});main = require('main');
+});var exp = require('main');if ("undefined" != typeof module) module.exports = exp;else main = exp;
 })();
-// Generated by CoffeeScript 1.4.0
 (function() {
   var Channel, isBrowser,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __slice = [].slice;
+    __slice = Array.prototype.slice;
 
   isBrowser = typeof window !== 'undefined';
 
@@ -2834,23 +2799,14 @@ exports.qs = function (obj) {
       this.name = name;
       this.socket = socket;
       this.runStack = __bind(this.runStack, this);
-
       this.use = __bind(this.use, this);
-
       this.ready = __bind(this.ready, this);
-
       this.removeAllListeners = __bind(this.removeAllListeners, this);
-
       this.removeListener = __bind(this.removeListener, this);
-
       this.once = __bind(this.once, this);
-
       this.addListener = __bind(this.addListener, this);
-
       this.emit = __bind(this.emit, this);
-
       this.realEmit = __bind(this.realEmit, this);
-
       this.events = {};
       this.stack = [];
       if (this.socket) {
@@ -2871,9 +2827,7 @@ exports.qs = function (obj) {
       event = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
       return this.runStack(event, args, function(nargs) {
         var l, _i, _len, _ref;
-        if (!_this.events[event]) {
-          return false;
-        }
+        if (!_this.events[event]) return false;
         _ref = _this.events[event];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           l = _ref[_i];
@@ -2929,18 +2883,14 @@ exports.qs = function (obj) {
 
     Channel.prototype.removeSocketListener = function(listener) {
       var l;
-      if (!this.listeners) {
-        return this;
-      }
+      if (!this.listeners) return this;
       this.listeners = (function() {
         var _i, _len, _ref, _results;
         _ref = this.listeners;
         _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           l = _ref[_i];
-          if (l !== listener) {
-            _results.push(l);
-          }
+          if (l !== listener) _results.push(l);
         }
         return _results;
       }).call(this);
@@ -2949,18 +2899,14 @@ exports.qs = function (obj) {
 
     Channel.prototype.removeListener = function(event, listener) {
       var l;
-      if (!this.events[event]) {
-        return this;
-      }
+      if (!this.events[event]) return this;
       this.events[event] = (function() {
         var _i, _len, _ref, _results;
         _ref = this.events[event];
         _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           l = _ref[_i];
-          if (l !== listener) {
-            _results.push(l);
-          }
+          if (l !== listener) _results.push(l);
         }
         return _results;
       }).call(this);
@@ -2991,23 +2937,15 @@ exports.qs = function (obj) {
     Channel.prototype.runStack = function(event, args, cb) {
       var emit, idx,
         _this = this;
-      if (this.stack.length === 0) {
-        return cb(args);
-      }
-      if (event === 'newListener') {
-        return cb(args);
-      }
+      if (this.stack.length === 0) return cb(args);
+      if (event === 'newListener') return cb(args);
       idx = -1;
       emit = function() {
         var argv, next;
         argv = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-        if (argv.length !== 0) {
-          args = argv;
-        }
+        if (argv.length !== 0) args = argv;
         next = _this.stack[++idx];
-        if (next == null) {
-          return cb(args);
-        }
+        if (next == null) return cb(args);
         return next.apply(null, [emit, event].concat(__slice.call(args)));
       };
       emit.apply(null, args);
@@ -3024,10 +2962,9 @@ exports.qs = function (obj) {
   }
 
 }).call(this);
-// Generated by CoffeeScript 1.4.0
 (function() {
   var Channel, client, isBrowser,
-    __slice = [].slice;
+    __slice = Array.prototype.slice;
 
   isBrowser = typeof window !== 'undefined';
 
@@ -3045,35 +2982,36 @@ exports.qs = function (obj) {
       var _base, _ref;
       return (_ref = (_base = this.channels)[name]) != null ? _ref : _base[name] = new Channel(name, this.ssocket);
     },
+    connect: function(socket) {
+      var reconnectChannels,
+        _this = this;
+      reconnectChannels = function() {
+        var channel, name, _ref, _results;
+        _ref = _this.channels;
+        _results = [];
+        for (name in _ref) {
+          channel = _ref[name];
+          _this.channels[name] = new Channel(name, socket);
+          _this.channels[name].listeners = channel.listeners;
+          _results.push(_this.channels[name].events = channel.events);
+        }
+        return _results;
+      };
+      return setTimeout(reconnectChannels, 100);
+    },
     validate: function(socket, msg, done) {
-      if (typeof msg !== 'object') {
-        return done(false);
-      }
-      if (typeof msg.type !== 'string') {
-        return done(false);
-      }
+      if (typeof msg !== 'object') return done(false);
+      if (typeof msg.type !== 'string') return done(false);
       switch (msg.type) {
         case 'emit':
-          if (typeof msg.channel !== 'string') {
-            return done(false);
-          }
-          if (!typeof (this.channels[msg.channel] != null)) {
-            return done(false);
-          }
-          if (typeof msg.event !== 'string') {
-            return done(false);
-          }
-          if (!Array.isArray(msg.args)) {
-            return done(false);
-          }
+          if (typeof msg.channel !== 'string') return done(false);
+          if (!typeof (this.channels[msg.channel] != null)) return done(false);
+          if (typeof msg.event !== 'string') return done(false);
+          if (!Array.isArray(msg.args)) return done(false);
           break;
         case 'joined':
-          if (typeof msg.channel !== 'string') {
-            return done(false);
-          }
-          if (!typeof (this.channels[msg.channel] != null)) {
-            return done(false);
-          }
+          if (typeof msg.channel !== 'string') return done(false);
+          if (!typeof (this.channels[msg.channel] != null)) return done(false);
           break;
         default:
           return done(false);
