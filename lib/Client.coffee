@@ -10,8 +10,19 @@ client =
   start: ->
     @channels = {}
 
-  channel: (name) -> 
+  channel: (name) ->
     @channels[name] ?= new Channel name, @ssocket
+
+  # if we just got a new socket, reconnect the channels
+  connect: (socket) ->
+    reconnectChannels = =>
+      for name, channel of @channels
+        @channels[name] = new Channel name, socket
+        @channels[name].listeners = channel.listeners
+        @channels[name].events = channel.events
+        @channels[name].stack = channel.stack
+
+    setTimeout reconnectChannels, 100
 
   validate: (socket, msg, done) ->
     return done false unless typeof msg is 'object'
