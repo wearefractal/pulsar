@@ -20,6 +20,7 @@ client =
         @channels[name] = new Channel name, socket
         @channels[name].listeners = channel.listeners
         @channels[name].events = channel.events
+        @channels[name].stack = channel.stack
 
     setTimeout reconnectChannels, 100
 
