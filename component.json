@@ -1,8 +1,13 @@
 {
   "name": "pulsar",
-  "version": "0.1.7",
-  "main": "./pulsar.js",
+  "version": "0.5.1",
   "dependencies": {
-    "protosock": "latest"
-  }
+    "wearefractal/protosock": "*"
+  },
+  "main": "dist/main.js",
+  "scripts": [
+    "dist/main.js",
+    "dist/Client.js",
+    "dist/Channel.js"
+  ]
 }

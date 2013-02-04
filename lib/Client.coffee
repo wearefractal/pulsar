@@ -1,6 +1,4 @@
-isBrowser = typeof window isnt 'undefined'
-
-Channel = (if isBrowser then PulsarChannel else require './Channel')
+Channel = require './Channel'
 
 client =
   options:
@@ -39,7 +37,4 @@ client =
         chan.joined = true
         chan.realEmit 'join'
 
-if isBrowser
-  window.Pulsar = createClient: ProtoSock.createClientWrapper client
-else
-  module.exports = client
+module.exports = client

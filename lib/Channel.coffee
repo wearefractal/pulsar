@@ -1,5 +1,3 @@
-isBrowser = typeof window isnt 'undefined'
-
 class Channel
   constructor: (@name, @socket) ->
     @events = {}
@@ -82,7 +80,4 @@ class Channel
     emit args...
     return
 
-if isBrowser
-  window.PulsarChannel = Channel
-else
-  module.exports = Channel
+module.exports = Channel
