@@ -8,7 +8,7 @@ app.use connect.static join __dirname, './public'
 server = app.listen 8080
 
 # Events
-pulse = Pulsar.createServer(server);
+pulse = Pulsar.createServer server
 auction = pulse.channel 'auction'
 
 auction.on 'bid', (bid) ->

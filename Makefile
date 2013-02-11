@@ -8,7 +8,7 @@ build: components lib
 	@node_modules/.bin/uglifyjs -nc --unsafe -mt -o pulsar.min.js pulsar.js
 	@echo "File size (minified): " && cat pulsar.min.js | wc -c
 	@echo "File size (gzipped): " && cat pulsar.min.js | gzip -9f  | wc -c
-	@cp pulsar.js example/pulsar.js
+	@cp pulsar.js example/public/pulsar.js
 
 components: component.json
 	@component install --dev
