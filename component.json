@@ -1,6 +1,6 @@
 {
   "name": "pulsar",
-  "version": "0.5.1",
+  "version": "0.1.10",
   "dependencies": {
     "wearefractal/protosock": "*"
   },

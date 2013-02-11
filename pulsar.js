@@ -217,7 +217,7 @@ module.exports = Emitter;
 
 /**
  * Initialize a new `Emitter`.
- * 
+ *
  * @api public
  */
 
@@ -290,7 +290,9 @@ Emitter.prototype.once = function(event, fn){
  * @api public
  */
 
-Emitter.prototype.off = function(event, fn){
+Emitter.prototype.off =
+Emitter.prototype.removeListener =
+Emitter.prototype.removeAllListeners = function(event, fn){
   this._callbacks = this._callbacks || {};
   var callbacks = this._callbacks[event];
   if (!callbacks) return this;
@@ -312,7 +314,7 @@ Emitter.prototype.off = function(event, fn){
  *
  * @param {String} event
  * @param {Mixed} ...
- * @return {Emitter} 
+ * @return {Emitter}
  */
 
 Emitter.prototype.emit = function(event){
@@ -354,7 +356,6 @@ Emitter.prototype.listeners = function(event){
 Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
-
 
 });
 require.register("LearnBoost-engine.io-protocol/lib/index.js", function(exports, require, module){
@@ -606,7 +607,9 @@ debug.skips = [];
  */
 
 debug.enable = function(name) {
-  localStorage.debug = name;
+  try {
+    localStorage.debug = name;
+  } catch(e){}
 
   var split = (name || '').split(/[\s,]+/)
     , len = split.length;
@@ -676,6 +679,7 @@ debug.enabled = function(name) {
 // persist
 
 if (window.localStorage) debug.enable(localStorage.debug);
+
 });
 require.register("LearnBoost-engine.io-client/lib/index.js", function(exports, require, module){
 
@@ -3266,8 +3270,7 @@ require.register("pulsar/dist/main.js", function(exports, require, module){
   client = require('./Client');
 
   module.exports = {
-    createClient: ProtoSock.createClientWrapper(client),
-    createServer: ProtoSock.createServerWrapper(server)
+    createClient: ProtoSock.createClientWrapper(client)
   };
 
   if (!(typeof window !== "undefined" && window !== null)) {

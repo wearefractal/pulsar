@@ -7,8 +7,7 @@
   client = require('./Client');
 
   module.exports = {
-    createClient: ProtoSock.createClientWrapper(client),
-    createServer: ProtoSock.createServerWrapper(server)
+    createClient: ProtoSock.createClientWrapper(client)
   };
 
   if (!(typeof window !== "undefined" && window !== null)) {
