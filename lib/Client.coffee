@@ -7,6 +7,8 @@ client =
     namespace: 'Pulsar'
     resource: 'default'
 
+  connectAttempts: 0
+
   start: ->
     @channels = {}
 
@@ -15,6 +17,8 @@ client =
 
   # if we just got a new socket, reconnect the channels
   connect: (socket) ->
+    @connectAttempts++
+
     reconnectChannels = =>
       for name, channel of @channels
         @channels[name] = new Channel name, socket
@@ -22,7 +26,7 @@ client =
         @channels[name].events = channel.events
         @channels[name].stack = channel.stack
 
-    setTimeout reconnectChannels, 100
+    setTimeout reconnectChannels, 100 if @connectAttempts > 1
 
   validate: (socket, msg, done) ->
     return done false unless typeof msg is 'object'

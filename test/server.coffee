@@ -8,8 +8,8 @@ randomPort = -> Math.floor(Math.random() * 2000) + 8000
 getServer = ->
   Pulsar.createServer http.createServer().listen randomPort()
 
-getClient = (server) -> 
-  Pulsar.createClient 
+getClient = (server) ->
+  Pulsar.createClient
     host: server.server.httpServer.address().address
     port: server.server.httpServer.address().port
     resource: server.options.resource
@@ -109,6 +109,34 @@ describe 'Pulsar', ->
           done()
         client.disconnect()
 
+    it 'should reconnect channels', (done) ->
+      serv = getServer()
+      channel = serv.channel 'test'
+
+      client = getClient serv
+      cchan = client.channel 'test'
+
+      # once the client is ready
+      cchan.ready ->
+
+        # disconnect the server
+        serv.disconnect()
+
+        # create a new server
+        serv = getServer()
+        channel = serv.channel 'test'
+
+        # tests should pass
+        finish = ->
+          channel.listeners.length.should.equal 1
+          channel.listeners[0].id.should.equal cchan.socket.id
+          channel.listeners[0].on 'close', ->
+            channel.listeners.length.should.equal 0
+            done()
+          client.disconnect()
+
+        setTimeout finish, 400
+
   describe 'multiple channels', ->
     it 'should add', (done) ->
       serv = getServer()
@@ -181,7 +209,7 @@ describe 'Pulsar', ->
       called = false
       serv = getServer()
       channel = serv.channel 'test'
-      channel.use (emit, event, num) -> 
+      channel.use (emit, event, num) ->
         should.exist emit
         should.exist event
         should.exist num
@@ -201,7 +229,7 @@ describe 'Pulsar', ->
       called = false
       serv = getServer()
       channel = serv.channel 'test'
-      channel.use (emit, event, num) -> 
+      channel.use (emit, event, num) ->
         should.exist emit
         should.exist event
         should.exist num
