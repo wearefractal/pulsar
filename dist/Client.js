@@ -11,7 +11,19 @@
       resource: 'default'
     },
     start: function() {
-      return this.channels = {};
+      var _this = this;
+      this.channels = {};
+      return this.on("reconnected", function() {
+        var chan, name, _i, _len, _ref, _results;
+        _ref = _this.channels;
+        _results = [];
+        for (chan = _i = 0, _len = _ref.length; _i < _len; chan = ++_i) {
+          name = _ref[chan];
+          console.log(name, chan);
+          _results.push(chan.joinChannel());
+        }
+        return _results;
+      });
     },
     channel: function(name) {
       var _base, _ref;

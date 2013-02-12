@@ -29,17 +29,25 @@
 
       this.events = {};
       this.stack = [];
+      this.joinChannel();
+    }
+
+    Channel.prototype.joinChannel = function() {
+      var _this = this;
       if (this.socket) {
         this.joined = false;
         this.socket.write({
           type: 'join',
           channel: this.name
         });
+        return this.socket.once("close", function() {
+          return _this.joined = false;
+        });
       } else {
         this.joined = true;
-        this.listeners = [];
+        return this.listeners = [];
       }
-    }
+    };
 
     Channel.prototype.realEmit = function() {
       var args, event,

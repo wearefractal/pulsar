@@ -3295,7 +3295,19 @@ require.register("pulsar/dist/Client.js", function(exports, require, module){
       resource: 'default'
     },
     start: function() {
-      return this.channels = {};
+      var _this = this;
+      this.channels = {};
+      return this.on("reconnected", function() {
+        var chan, name, _i, _len, _ref, _results;
+        _ref = _this.channels;
+        _results = [];
+        for (chan = _i = 0, _len = _ref.length; _i < _len; chan = ++_i) {
+          name = _ref[chan];
+          console.log(name, chan);
+          _results.push(chan.joinChannel());
+        }
+        return _results;
+      });
     },
     channel: function(name) {
       var _base, _ref;
@@ -3389,17 +3401,25 @@ require.register("pulsar/dist/Channel.js", function(exports, require, module){
 
       this.events = {};
       this.stack = [];
+      this.joinChannel();
+    }
+
+    Channel.prototype.joinChannel = function() {
+      var _this = this;
       if (this.socket) {
         this.joined = false;
         this.socket.write({
           type: 'join',
           channel: this.name
         });
+        return this.socket.once("close", function() {
+          return _this.joined = false;
+        });
       } else {
         this.joined = true;
-        this.listeners = [];
+        return this.listeners = [];
       }
-    }
+    };
 
     Channel.prototype.realEmit = function() {
       var args, event,
