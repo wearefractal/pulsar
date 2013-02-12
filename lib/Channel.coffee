@@ -2,11 +2,16 @@ class Channel
   constructor: (@name, @socket) ->
     @events = {}
     @stack = []
+    @joinChannel()
+  
+  joinChannel: ->
     if @socket
       @joined = false
       @socket.write
         type: 'join'
         channel: @name
+      @socket.once "close", =>
+        @joined = false
     else
       @joined = true
       @listeners = []

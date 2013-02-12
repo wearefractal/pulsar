@@ -216,3 +216,37 @@ describe 'Pulsar', ->
       client = getClient serv
       cchan = client.channel 'test'
       cchan.emit 'ping', 2
+
+  describe 'reconnect', ->
+    it 'should call on close and buffer messages', (done) ->
+      @timeout 5000
+      serv = getServer()
+      channel = serv.channel 'test'
+      channel2 = serv.channel 'test2'
+      should.exist channel
+      should.exist channel2
+
+      channel.on 'ping', (num) ->
+        num.should.equal 2
+        channel.emit 'pong', num
+
+      channel2.on 'ping', (num) ->
+        num.should.equal 3
+        channel2.emit 'pong', num
+
+      client = getClient serv
+      cchan = client.channel 'test'
+      cchan2 = client.channel 'test2'
+      client.once "connected", ->
+        client.disconnect()
+        cchan.ready ->
+          cchan2.ready ->
+            cchan.emit 'ping', 2
+            cchan.on 'pong', (num) ->
+              num.should.equal 2
+
+              cchan2.emit 'ping', 3
+              cchan2.on 'pong', (num) ->
+                num.should.equal 3
+                done()
+          

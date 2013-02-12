@@ -7,6 +7,10 @@ client =
 
   start: ->
     @channels = {}
+    @on "reconnected", =>
+      for name, chan in @channels
+        console.log name, chan
+        chan.joinChannel()
 
   channel: (name) -> 
     @channels[name] ?= new Channel name, @ssocket
