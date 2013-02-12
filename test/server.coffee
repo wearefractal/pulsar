@@ -13,6 +13,7 @@ getClient = (server) ->
     host: server.server.httpServer.address().address
     port: server.server.httpServer.address().port
     resource: server.options.resource
+    transports: ["websocket"]
 
 describe 'Pulsar', ->
   describe 'channels', ->
@@ -20,6 +21,7 @@ describe 'Pulsar', ->
       serv = getServer()
       channel = serv.channel 'test'
       should.exist channel
+      serv.destroy()
       done()
 
     it 'should emit join on server', (done) ->
@@ -31,6 +33,8 @@ describe 'Pulsar', ->
       cchan = client.channel 'test'
 
       channel.on 'join', (socket) ->
+        serv.destroy()
+        client.destroy()
         done()
 
     it 'should emit join on client', (done) ->
@@ -41,7 +45,10 @@ describe 'Pulsar', ->
       client = getClient serv
       cchan = client.channel 'test'
 
-      cchan.on 'join', -> done()
+      cchan.on 'join', ->
+        serv.destroy()
+        client.destroy()
+        done()
 
     it 'should call ready on client', (done) ->
       serv = getServer()
@@ -50,7 +57,10 @@ describe 'Pulsar', ->
 
       client = getClient serv
       cchan = client.channel 'test'
-      cchan.ready -> done()
+      cchan.ready ->
+        serv.destroy()
+        client.destroy()
+        done()
 
     it 'should call', (done) ->
       serv = getServer()
@@ -65,6 +75,8 @@ describe 'Pulsar', ->
       cchan.emit 'ping', 2
       cchan.on 'pong', (num) ->
         num.should.equal 2
+        serv.destroy()
+        client.destroy()
         done()
 
     it 'should call reverse', (done) ->
@@ -73,6 +85,8 @@ describe 'Pulsar', ->
       should.exist channel
       channel.on 'pong', (num) ->
         num.should.equal 2
+        serv.destroy()
+        client.destroy()
         done()
 
       client = getClient serv
@@ -93,6 +107,8 @@ describe 'Pulsar', ->
       cchan.ready ->
         channel.listeners.length.should.equal 1
         channel.listeners[0].id.should.equal cchan.socket.id
+        serv.destroy()
+        client.destroy()
         done()
 
     it 'should unjoin on close', (done) ->
@@ -104,8 +120,10 @@ describe 'Pulsar', ->
       cchan.ready ->
         channel.listeners.length.should.equal 1
         channel.listeners[0].id.should.equal cchan.socket.id
-        channel.listeners[0].on 'close', ->
+        channel.listeners[0].once 'close', ->
           channel.listeners.length.should.equal 0
+          serv.destroy()
+          client.destroy()
           done()
         client.disconnect()
 
@@ -116,6 +134,7 @@ describe 'Pulsar', ->
       channel2 = serv.channel 'test2'
       should.exist channel
       should.exist channel2
+      serv.destroy()
       done()
 
     it 'should call', (done) ->
@@ -144,6 +163,8 @@ describe 'Pulsar', ->
         cchan2.emit 'ping', 3
         cchan2.on 'pong', (num) ->
           num.should.equal 3
+          serv.destroy()
+          client.destroy()
           done()
 
   describe 'multiple clients', ->
@@ -166,6 +187,8 @@ describe 'Pulsar', ->
 
           cchan.on 'pong', (num) ->
             num.should.equal 2
+            serv.destroy()
+            client.destroy()
             done()
 
           cchan.emit 'ping', 2
@@ -175,6 +198,7 @@ describe 'Pulsar', ->
       serv = getServer()
       channel = serv.channel 'test'
       channel.use ->
+      serv.destroy()
       done()
 
     it 'should call', (done) ->
@@ -192,6 +216,8 @@ describe 'Pulsar', ->
       channel.on 'ping', (num) ->
         num.should.equal 2
         called.should.be.true
+        serv.destroy()
+        client.destroy()
         done()
       client = getClient serv
       cchan = client.channel 'test'
@@ -202,6 +228,7 @@ describe 'Pulsar', ->
       serv = getServer()
       channel = serv.channel 'test'
       channel.use (emit, event, num) -> 
+        console.log event
         should.exist emit
         should.exist event
         should.exist num
@@ -212,6 +239,8 @@ describe 'Pulsar', ->
       channel.on 'ping', (num) ->
         num.should.equal 3
         called.should.be.true
+        serv.destroy()
+        client.destroy()
         done()
       client = getClient serv
       cchan = client.channel 'test'
@@ -238,9 +267,10 @@ describe 'Pulsar', ->
       cchan = client.channel 'test'
       cchan2 = client.channel 'test2'
       client.once "connected", ->
-        client.disconnect()
         cchan.ready ->
           cchan2.ready ->
+            client.disconnect()
+
             cchan.emit 'ping', 2
             cchan.on 'pong', (num) ->
               num.should.equal 2
@@ -248,5 +278,7 @@ describe 'Pulsar', ->
               cchan2.emit 'ping', 3
               cchan2.on 'pong', (num) ->
                 num.should.equal 3
+                serv.destroy()
+                client.destroy()
                 done()
           

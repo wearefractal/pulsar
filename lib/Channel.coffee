@@ -6,7 +6,6 @@ class Channel
   
   joinChannel: ->
     if @socket
-      @joined = false
       @socket.write
         type: 'join'
         channel: @name
@@ -55,6 +54,8 @@ class Channel
   removeSocketListener: (listener) ->
     return @ unless @listeners
     @listeners = (l for l in @listeners when l isnt listener)
+    @emit 'unjoin', listener
+    @realEmit 'unjoin', listener
     return @
 
   removeListener: (event, listener) =>

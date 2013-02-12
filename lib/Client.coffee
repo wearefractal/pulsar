@@ -8,8 +8,7 @@ client =
   start: ->
     @channels = {}
     @on "reconnected", =>
-      for name, chan in @channels
-        console.log name, chan
+      for name, chan of @channels
         chan.joinChannel()
 
   channel: (name) -> 
