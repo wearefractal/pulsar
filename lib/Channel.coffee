@@ -3,7 +3,7 @@ class Channel
     @events = {}
     @stack = []
     @joinChannel()
-  
+
   joinChannel: ->
     if @socket
       @socket.write
@@ -71,7 +71,7 @@ class Channel
     if @joined
       fn @
     else
-      @on 'join', => fn @
+      @once 'join', => fn @
 
   use: (fn) => @stack.push(fn); @
   runStack: (event, args, cb) =>

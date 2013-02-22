@@ -41,7 +41,7 @@ module.exports =
       when 'join'
         # TODO: Pass an eventemitter instead of socket
         chan.listeners.push socket
-        socket.on 'close', ->
+        socket.once 'close', ->
           chan.removeSocketListener socket
         chan.realEmit 'join', socket
         socket.write
