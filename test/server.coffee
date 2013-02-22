@@ -8,8 +8,8 @@ randomPort = -> Math.floor(Math.random() * 2000) + 8000
 getServer = ->
   Pulsar.createServer http.createServer().listen randomPort()
 
-getClient = (server) -> 
-  Pulsar.createClient 
+getClient = (server) ->
+  Pulsar.createClient
     host: server.server.httpServer.address().address
     port: server.server.httpServer.address().port
     resource: server.options.resource
@@ -205,14 +205,14 @@ describe 'Pulsar', ->
       called = false
       serv = getServer()
       channel = serv.channel 'test'
-      channel.use (emit, event, num) -> 
-        should.exist emit
-        should.exist event
-        should.exist num
-        event.should.equal 'ping'
-        num.should.equal 2
-        called = true
-        emit()
+      channel.use (emit, event, num) ->
+        if event is 'ping'
+          should.exist emit
+          should.exist event
+          should.exist num
+          num.should.equal 2
+          called = true
+          emit()
       channel.on 'ping', (num) ->
         num.should.equal 2
         called.should.be.true
@@ -227,15 +227,14 @@ describe 'Pulsar', ->
       called = false
       serv = getServer()
       channel = serv.channel 'test'
-      channel.use (emit, event, num) -> 
-        console.log event
-        should.exist emit
-        should.exist event
-        should.exist num
-        event.should.equal 'ping'
-        num.should.equal 2
-        called = true
-        emit 3
+      channel.use (emit, event, num) ->
+        if event is 'ping'
+          should.exist emit
+          should.exist event
+          should.exist num
+          num.should.equal 2
+          called = true
+          emit 3
       channel.on 'ping', (num) ->
         num.should.equal 3
         called.should.be.true
@@ -281,4 +280,4 @@ describe 'Pulsar', ->
                 serv.destroy()
                 client.destroy()
                 done()
-          
+
