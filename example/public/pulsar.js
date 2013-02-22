@@ -217,7 +217,7 @@ module.exports = Emitter;
 
 /**
  * Initialize a new `Emitter`.
- * 
+ *
  * @api public
  */
 
@@ -290,7 +290,9 @@ Emitter.prototype.once = function(event, fn){
  * @api public
  */
 
-Emitter.prototype.off = function(event, fn){
+Emitter.prototype.off =
+Emitter.prototype.removeListener =
+Emitter.prototype.removeAllListeners = function(event, fn){
   this._callbacks = this._callbacks || {};
   var callbacks = this._callbacks[event];
   if (!callbacks) return this;
@@ -312,7 +314,7 @@ Emitter.prototype.off = function(event, fn){
  *
  * @param {String} event
  * @param {Mixed} ...
- * @return {Emitter} 
+ * @return {Emitter}
  */
 
 Emitter.prototype.emit = function(event){
@@ -352,10 +354,6 @@ Emitter.prototype.listeners = function(event){
  */
 
 Emitter.prototype.hasListeners = function(event){
-  return !! this.listeners(event).length;
-};
-
-teners = function(event){
   return !! this.listeners(event).length;
 };
 
@@ -404,7 +402,7 @@ var err = { type: 'error', data: 'parser error' }
  */
 
 exports.encodePacket = function (packet) {
-  var encoded = packets[packet.type];
+  var encoded = packets[packet.type]
 
   // data fragment is optional
   if (undefined !== packet.data) {
@@ -467,37 +465,37 @@ exports.encodePayload = function (packets) {
 /*
  * Decodes data when a payload is maybe expected.
  *
- * @param {String} data, callback method
- * @return {NaN} 
+ * @param {String} data
+ * @return {Array} packets
  * @api public
  */
 
-exports.decodePayload = function (data, callback) {
-  var packet;
+exports.decodePayload = function (data) {
   if (data == '') {
     // parser error - ignoring payload
-    return callback(packet, true);
+    return [err];
   }
 
-  var length = ''
-    , n, msg;
+  var packets = []
+    , length = ''
+    , n, msg, packet
 
   for (var i = 0, l = data.length; i < l; i++) {
-    var chr = data.charAt(i);
+    var chr = data.charAt(i)
 
     if (':' != chr) {
       length += chr;
     } else {
       if ('' == length || (length != (n = Number(length)))) {
         // parser error - ignoring payload
-        return callback(packet, true);
+        return [err];
       }
 
       msg = data.substr(i + 1, n);
 
       if (length != msg.length) {
         // parser error - ignoring payload
-        return callback(packet, true);
+        return [err];
       }
 
       if (msg.length) {
@@ -505,23 +503,24 @@ exports.decodePayload = function (data, callback) {
 
         if (err.type == packet.type && err.data == packet.data) {
           // parser error in individual packet - ignoring payload
-          return callback(packet, true);
+          return [err];
         }
 
-        return callback(packet, i + n == l - 1);
+        packets.push(packet);
       }
 
       // advance cursor
       i += n;
-      length = '';
+      length = ''
     }
   }
 
   if (length != '') {
     // parser error - ignoring payload
-    return callback(packet, true);
+    return [err];
   }
 
+  return packets;
 };
 
 });
