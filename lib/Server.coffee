@@ -41,7 +41,8 @@ module.exports =
       when 'join'
         # TODO: Pass an eventemitter instead of socket
         chan.listeners.push socket
-        socket.on 'close', ->
+        console.log "#{chan.__id}: Received join. There are #{chan.listeners.length} listeners on #{msg.channel}."
+        socket.once 'close', ->
           chan.removeSocketListener socket
         chan.realEmit 'join', socket
         socket.write

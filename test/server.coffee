@@ -5,8 +5,11 @@ Pulsar = require '../'
 
 randomPort = -> Math.floor(Math.random() * 2000) + 8000
 
-getServer = ->
-  Pulsar.createServer http.createServer().listen randomPort()
+getServer = (port) ->
+  port ||= randomPort()
+  server = Pulsar.createServer http.createServer().listen port
+  server.port = port
+  server
 
 getClient = (server) ->
   Pulsar.createClient
@@ -281,3 +284,39 @@ describe 'Pulsar', ->
                 client.destroy()
                 done()
 
+    it 'should reconnect channels', (done) ->
+      serv = getServer()
+      port = serv.port
+      serv.channel 'test'
+
+      client = getClient serv
+      cchan = client.channel 'test'
+
+      # tests should pass
+      cchan.on 'pong', (num) ->
+        num.should.equal 2
+        done()
+
+      # once the client is ready
+      cchan.ready ->
+        #cchan.emit 'ping', 2
+
+        # disconnect the server
+        serv.disconnect()
+        serv.destroy()
+        console.log 'destroyed server'
+
+        # create a new server
+        serv2 = getServer port
+        channel = serv2.channel 'test'
+
+        channel.on 'ping', (num) ->
+          num.should.equal 2
+          console.log 'got ping sending pong'
+          channel.emit 'pong', num
+
+        client.on 'reconnected', ->
+          console.log 'reconnected'
+          sendMsg = ->
+            cchan.emit 'ping', 2
+          setTimeout sendMsg, 100

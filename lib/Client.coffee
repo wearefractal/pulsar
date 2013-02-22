@@ -11,7 +11,7 @@ client =
       for name, chan of @channels
         chan.joinChannel()
 
-  channel: (name) -> 
+  channel: (name) ->
     @channels[name] ?= new Channel name, @ssocket
 
   validate: (socket, msg, done) ->
@@ -35,6 +35,7 @@ client =
     chan = @channels[msg.channel]
     switch msg.type
       when 'emit'
+        console.log 'client received message:', msg.event
         chan.realEmit msg.event, msg.args...
       when 'joined'
         chan.joined = true
