@@ -11,7 +11,7 @@ client =
       for name, chan of @channels
         chan.joinChannel()
 
-  channel: (name) -> 
+  channel: (name) ->
     @channels[name] ?= new Channel name, @ssocket
 
   validate: (socket, msg, done) ->

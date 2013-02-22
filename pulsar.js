@@ -402,7 +402,7 @@ var err = { type: 'error', data: 'parser error' }
  */
 
 exports.encodePacket = function (packet) {
-  var encoded = packets[packet.type]
+  var encoded = packets[packet.type];
 
   // data fragment is optional
   if (undefined !== packet.data) {
@@ -465,37 +465,37 @@ exports.encodePayload = function (packets) {
 /*
  * Decodes data when a payload is maybe expected.
  *
- * @param {String} data
- * @return {Array} packets
+ * @param {String} data, callback method
+ * @return {NaN} 
  * @api public
  */
 
-exports.decodePayload = function (data) {
+exports.decodePayload = function (data, callback) {
+  var packet;
   if (data == '') {
     // parser error - ignoring payload
-    return [err];
+    return callback(packet, true);
   }
 
-  var packets = []
-    , length = ''
-    , n, msg, packet
+  var length = ''
+    , n, msg;
 
   for (var i = 0, l = data.length; i < l; i++) {
-    var chr = data.charAt(i)
+    var chr = data.charAt(i);
 
     if (':' != chr) {
       length += chr;
     } else {
       if ('' == length || (length != (n = Number(length)))) {
         // parser error - ignoring payload
-        return [err];
+        return callback(packet, true);
       }
 
       msg = data.substr(i + 1, n);
 
       if (length != msg.length) {
         // parser error - ignoring payload
-        return [err];
+        return callback(packet, true);
       }
 
       if (msg.length) {
@@ -503,24 +503,23 @@ exports.decodePayload = function (data) {
 
         if (err.type == packet.type && err.data == packet.data) {
           // parser error in individual packet - ignoring payload
-          return [err];
+          return callback(packet, true);
         }
 
-        packets.push(packet);
+        return callback(packet, i + n == l - 1);
       }
 
       // advance cursor
       i += n;
-      length = ''
+      length = '';
     }
   }
 
   if (length != '') {
     // parser error - ignoring payload
-    return [err];
+    return callback(packet, true);
   }
 
-  return packets;
 };
 
 });
@@ -756,7 +755,6 @@ function Socket(uri, opts){
        location.port :
        (this.secure ? 443 : 80));
   this.query = opts.query || {};
-  this.query.uid = rnd();
   this.upgrade = false !== opts.upgrade;
   this.path = (opts.path || '/engine.io').replace(/\/$/, '') + '/';
   this.forceJSONP = !!opts.forceJSONP;
@@ -1210,17 +1208,6 @@ Socket.prototype.filterUpgrades = function (upgrades) {
   }
   return filteredUpgrades;
 };
-
-/**
- * Generates a random uid.
- *
- * @api private
- */
-
-function rnd () {
-  return String(Math.random()).substr(5) + String(Math.random()).substr(5);
-}
-
 });
 require.register("LearnBoost-engine.io-client/lib/transport.js", function(exports, require, module){
 
@@ -2387,6 +2374,7 @@ JSONPPolling.prototype.doClose = function () {
  */
 
 JSONPPolling.prototype.doPoll = function () {
+	var self = this;
   var script = document.createElement('script');
 
   if (this.script) {
@@ -2396,10 +2384,14 @@ JSONPPolling.prototype.doPoll = function () {
 
   script.async = true;
   script.src = this.uri();
+	script.onerror = function(e){
+		self.onError('jsonp poll error',e);
+	}
 
   var insertAt = document.getElementsByTagName('script')[0];
   insertAt.parentNode.insertBefore(script, insertAt);
   this.script = script;
+
 
   if (util.ua.gecko) {
     setTimeout(function () {
@@ -2451,7 +2443,11 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 
   function initIframe () {
     if (self.iframe) {
-      self.form.removeChild(self.iframe);
+      try {
+        self.form.removeChild(self.iframe);
+      } catch (e) {
+        self.onError('jsonp polling iframe removal error', e);
+      }
     }
 
     try {
@@ -3109,7 +3105,7 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
     __extends(Client, _super);
 
     function Client(plugin, options) {
-      var eiopts, k, v, _base, _base1, _ref, _ref1;
+      var eiopts, k, v, _base, _base1, _base2, _ref, _ref1, _ref2;
       if (options == null) {
         options = {};
       }
@@ -3136,6 +3132,9 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
       }
       if ((_ref1 = (_base1 = this.options).reconnectLimit) == null) {
         _base1.reconnectLimit = Infinity;
+      }
+      if ((_ref2 = (_base2 = this.options).reconnectTimeout) == null) {
+        _base2.reconnectTimeout = Infinity;
       }
       this.isServer = false;
       this.isClient = true;
@@ -3166,6 +3165,13 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
 
     Client.prototype.disconnect = function() {
       this.ssocket.disconnect();
+      return this;
+    };
+
+    Client.prototype.destroy = function() {
+      this.options.reconnect = false;
+      this.ssocket.disconnect();
+      this.emit("destroyed");
       return this;
     };
 
@@ -3217,7 +3223,7 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
     };
 
     Client.prototype.reconnect = function(cb) {
-      var attempts, connect, done, err, maxAttempts,
+      var attempts, connect, done, err, maxAttempts, start, timeout,
         _this = this;
       if (this.ssocket.reconnecting) {
         return cb("Already reconnecting");
@@ -3226,10 +3232,13 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
       if (this.ssocket.readyState === 'open') {
         this.ssocket.disconnect();
       }
+      start = Date.now();
       maxAttempts = this.options.reconnectLimit;
+      timeout = this.options.reconnectTimeout;
       attempts = 0;
       done = function() {
         _this.ssocket.reconnecting = false;
+        _this.emit("reconnected");
         return cb();
       };
       err = function(e) {
@@ -3243,6 +3252,9 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
         }
         if (attempts >= maxAttempts) {
           return err("Exceeded max attempts");
+        }
+        if ((Date.now() - start) > timeout) {
+          return err("Timeout on reconnect");
         }
         attempts++;
         _this.ssocket.open();
@@ -3261,7 +3273,6 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
 
 });
 require.register("pulsar/dist/main.js", function(exports, require, module){
-// Generated by CoffeeScript 1.4.0
 (function() {
   var ProtoSock, client, server;
 
@@ -3282,10 +3293,9 @@ require.register("pulsar/dist/main.js", function(exports, require, module){
 
 });
 require.register("pulsar/dist/Client.js", function(exports, require, module){
-// Generated by CoffeeScript 1.4.0
 (function() {
   var Channel, client,
-    __slice = [].slice;
+    __slice = Array.prototype.slice;
 
   Channel = require('./Channel');
 
@@ -3298,12 +3308,11 @@ require.register("pulsar/dist/Client.js", function(exports, require, module){
       var _this = this;
       this.channels = {};
       return this.on("reconnected", function() {
-        var chan, name, _i, _len, _ref, _results;
+        var chan, name, _ref, _results;
         _ref = _this.channels;
         _results = [];
-        for (chan = _i = 0, _len = _ref.length; _i < _len; chan = ++_i) {
-          name = _ref[chan];
-          console.log(name, chan);
+        for (name in _ref) {
+          chan = _ref[name];
           _results.push(chan.joinChannel());
         }
         return _results;
@@ -3314,34 +3323,18 @@ require.register("pulsar/dist/Client.js", function(exports, require, module){
       return (_ref = (_base = this.channels)[name]) != null ? _ref : _base[name] = new Channel(name, this.ssocket);
     },
     validate: function(socket, msg, done) {
-      if (typeof msg !== 'object') {
-        return done(false);
-      }
-      if (typeof msg.type !== 'string') {
-        return done(false);
-      }
+      if (typeof msg !== 'object') return done(false);
+      if (typeof msg.type !== 'string') return done(false);
       switch (msg.type) {
         case 'emit':
-          if (typeof msg.channel !== 'string') {
-            return done(false);
-          }
-          if (!typeof (this.channels[msg.channel] != null)) {
-            return done(false);
-          }
-          if (typeof msg.event !== 'string') {
-            return done(false);
-          }
-          if (!Array.isArray(msg.args)) {
-            return done(false);
-          }
+          if (typeof msg.channel !== 'string') return done(false);
+          if (!typeof (this.channels[msg.channel] != null)) return done(false);
+          if (typeof msg.event !== 'string') return done(false);
+          if (!Array.isArray(msg.args)) return done(false);
           break;
         case 'joined':
-          if (typeof msg.channel !== 'string') {
-            return done(false);
-          }
-          if (!typeof (this.channels[msg.channel] != null)) {
-            return done(false);
-          }
+          if (typeof msg.channel !== 'string') return done(false);
+          if (!typeof (this.channels[msg.channel] != null)) return done(false);
           break;
         default:
           return done(false);
@@ -3370,11 +3363,10 @@ require.register("pulsar/dist/Client.js", function(exports, require, module){
 
 });
 require.register("pulsar/dist/Channel.js", function(exports, require, module){
-// Generated by CoffeeScript 1.4.0
 (function() {
   var Channel,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __slice = [].slice;
+    __slice = Array.prototype.slice;
 
   Channel = (function() {
 
@@ -3382,23 +3374,14 @@ require.register("pulsar/dist/Channel.js", function(exports, require, module){
       this.name = name;
       this.socket = socket;
       this.runStack = __bind(this.runStack, this);
-
       this.use = __bind(this.use, this);
-
       this.ready = __bind(this.ready, this);
-
       this.removeAllListeners = __bind(this.removeAllListeners, this);
-
       this.removeListener = __bind(this.removeListener, this);
-
       this.once = __bind(this.once, this);
-
       this.addListener = __bind(this.addListener, this);
-
       this.emit = __bind(this.emit, this);
-
       this.realEmit = __bind(this.realEmit, this);
-
       this.events = {};
       this.stack = [];
       this.joinChannel();
@@ -3407,7 +3390,6 @@ require.register("pulsar/dist/Channel.js", function(exports, require, module){
     Channel.prototype.joinChannel = function() {
       var _this = this;
       if (this.socket) {
-        this.joined = false;
         this.socket.write({
           type: 'join',
           channel: this.name
@@ -3427,9 +3409,7 @@ require.register("pulsar/dist/Channel.js", function(exports, require, module){
       event = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
       return this.runStack(event, args, function(nargs) {
         var l, _i, _len, _ref;
-        if (!_this.events[event]) {
-          return false;
-        }
+        if (!_this.events[event]) return false;
         _ref = _this.events[event];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           l = _ref[_i];
@@ -3485,38 +3465,32 @@ require.register("pulsar/dist/Channel.js", function(exports, require, module){
 
     Channel.prototype.removeSocketListener = function(listener) {
       var l;
-      if (!this.listeners) {
-        return this;
-      }
+      if (!this.listeners) return this;
       this.listeners = (function() {
         var _i, _len, _ref, _results;
         _ref = this.listeners;
         _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           l = _ref[_i];
-          if (l !== listener) {
-            _results.push(l);
-          }
+          if (l !== listener) _results.push(l);
         }
         return _results;
       }).call(this);
+      this.emit('unjoin', listener);
+      this.realEmit('unjoin', listener);
       return this;
     };
 
     Channel.prototype.removeListener = function(event, listener) {
       var l;
-      if (!this.events[event]) {
-        return this;
-      }
+      if (!this.events[event]) return this;
       this.events[event] = (function() {
         var _i, _len, _ref, _results;
         _ref = this.events[event];
         _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           l = _ref[_i];
-          if (l !== listener) {
-            _results.push(l);
-          }
+          if (l !== listener) _results.push(l);
         }
         return _results;
       }).call(this);
@@ -3533,7 +3507,7 @@ require.register("pulsar/dist/Channel.js", function(exports, require, module){
       if (this.joined) {
         return fn(this);
       } else {
-        return this.on('join', function() {
+        return this.once('join', function() {
           return fn(_this);
         });
       }
@@ -3547,23 +3521,15 @@ require.register("pulsar/dist/Channel.js", function(exports, require, module){
     Channel.prototype.runStack = function(event, args, cb) {
       var emit, idx,
         _this = this;
-      if (this.stack.length === 0) {
-        return cb(args);
-      }
-      if (event === 'newListener') {
-        return cb(args);
-      }
+      if (this.stack.length === 0) return cb(args);
+      if (event === 'newListener') return cb(args);
       idx = -1;
       emit = function() {
         var argv, next;
         argv = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-        if (argv.length !== 0) {
-          args = argv;
-        }
+        if (argv.length !== 0) args = argv;
         next = _this.stack[++idx];
-        if (next == null) {
-          return cb(args);
-        }
+        if (next == null) return cb(args);
         return next.apply(null, [emit, event].concat(__slice.call(args)));
       };
       emit.apply(null, args);

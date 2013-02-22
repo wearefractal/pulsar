@@ -5,11 +5,14 @@ Pulsar = require '../'
 
 randomPort = -> Math.floor(Math.random() * 2000) + 8000
 
-getServer = ->
-  Pulsar.createServer http.createServer().listen randomPort()
+getServer = (port) ->
+  port ||= randomPort()
+  server = Pulsar.createServer http.createServer().listen port
+  server.port = port
+  server
 
-getClient = (server) -> 
-  Pulsar.createClient 
+getClient = (server) ->
+  Pulsar.createClient
     host: server.server.httpServer.address().address
     port: server.server.httpServer.address().port
     resource: server.options.resource
@@ -205,14 +208,14 @@ describe 'Pulsar', ->
       called = false
       serv = getServer()
       channel = serv.channel 'test'
-      channel.use (emit, event, num) -> 
-        should.exist emit
-        should.exist event
-        should.exist num
-        event.should.equal 'ping'
-        num.should.equal 2
-        called = true
-        emit()
+      channel.use (emit, event, num) ->
+        if event is 'ping'
+          should.exist emit
+          should.exist event
+          should.exist num
+          num.should.equal 2
+          called = true
+          emit()
       channel.on 'ping', (num) ->
         num.should.equal 2
         called.should.be.true
@@ -227,15 +230,14 @@ describe 'Pulsar', ->
       called = false
       serv = getServer()
       channel = serv.channel 'test'
-      channel.use (emit, event, num) -> 
-        console.log event
-        should.exist emit
-        should.exist event
-        should.exist num
-        event.should.equal 'ping'
-        num.should.equal 2
-        called = true
-        emit 3
+      channel.use (emit, event, num) ->
+        if event is 'ping'
+          should.exist emit
+          should.exist event
+          should.exist num
+          num.should.equal 2
+          called = true
+          emit 3
       channel.on 'ping', (num) ->
         num.should.equal 3
         called.should.be.true
@@ -247,38 +249,73 @@ describe 'Pulsar', ->
       cchan.emit 'ping', 2
 
   describe 'reconnect', ->
-    it 'should call on close and buffer messages', (done) ->
-      @timeout 5000
+    #it 'should call on close and buffer messages', (done) ->
+      #@timeout 5000
+      #serv = getServer()
+      #channel = serv.channel 'test'
+      #channel2 = serv.channel 'test2'
+      #should.exist channel
+      #should.exist channel2
+
+      #channel.on 'ping', (num) ->
+        #num.should.equal 2
+        #channel.emit 'pong', num
+
+      #channel2.on 'ping', (num) ->
+        #num.should.equal 3
+        #channel2.emit 'pong', num
+
+      #client = getClient serv
+      #cchan = client.channel 'test'
+      #cchan2 = client.channel 'test2'
+      #client.once "connected", ->
+        #cchan.ready ->
+          #cchan2.ready ->
+            #client.disconnect()
+
+            #cchan.emit 'ping', 2
+            #cchan.on 'pong', (num) ->
+              #num.should.equal 2
+
+              #cchan2.emit 'ping', 3
+              #cchan2.on 'pong', (num) ->
+                #num.should.equal 3
+                #serv.destroy()
+                #client.destroy()
+                #done()
+
+    it 'should reconnect channels', (done) ->
       serv = getServer()
-      channel = serv.channel 'test'
-      channel2 = serv.channel 'test2'
-      should.exist channel
-      should.exist channel2
-
-      channel.on 'ping', (num) ->
-        num.should.equal 2
-        channel.emit 'pong', num
-
-      channel2.on 'ping', (num) ->
-        num.should.equal 3
-        channel2.emit 'pong', num
+      serv2 = null
+      port = serv.port
+      serv.channel 'test'
 
       client = getClient serv
       cchan = client.channel 'test'
-      cchan2 = client.channel 'test2'
-      client.once "connected", ->
-        cchan.ready ->
-          cchan2.ready ->
-            client.disconnect()
 
-            cchan.emit 'ping', 2
-            cchan.on 'pong', (num) ->
-              num.should.equal 2
+      # tests should pass
+      cchan.on 'pong', (num) ->
+        num.should.equal 2
+        client.destroy()
+        serv2.destroy()
+        done()
 
-              cchan2.emit 'ping', 3
-              cchan2.on 'pong', (num) ->
-                num.should.equal 3
-                serv.destroy()
-                client.destroy()
-                done()
-          
+      # once the client is ready
+      cchan.ready ->
+
+        # disconnect the server
+        serv.disconnect()
+        serv.destroy()
+
+        # create a new server
+        serv2 = getServer port
+        channel = serv2.channel 'test'
+
+        # wire up server response
+        channel.on 'ping', (num) ->
+          num.should.equal 2
+          channel.emit 'pong', num
+
+        # trigger call/response
+        client.on 'reconnected', ->
+          cchan.emit 'ping', 2
