@@ -1,9 +1,5 @@
-counter = 0
-
 class Channel
   constructor: (@name, @socket) ->
-    @__id = counter++
-    console.log "#{@__id}: new channel"
     @events = {}
     @stack = []
     @joinChannel()
@@ -32,12 +28,10 @@ class Channel
       event: event
       args: args
 
-    console.log "#{@__id}: sending #{event} to #{@listeners?.length} listeners"
     if @listeners
       socket.write msg for socket in @listeners
       return true
     else if @socket
-      console.log "#{@__id}: sending #{event} to socket"
       @socket.write msg
       return true
     else

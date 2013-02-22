@@ -35,7 +35,6 @@ client =
     chan = @channels[msg.channel]
     switch msg.type
       when 'emit'
-        console.log 'client received message:', msg.event
         chan.realEmit msg.event, msg.args...
       when 'joined'
         chan.joined = true
