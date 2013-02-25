@@ -126,9 +126,8 @@ describe 'Pulsar', ->
         channel.listeners[0].once 'close', ->
           channel.listeners.length.should.equal 0
           serv.destroy()
-          client.destroy()
           done()
-        client.disconnect()
+        client.destroy()
 
   describe 'multiple channels', ->
     it 'should add', (done) ->

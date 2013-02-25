@@ -3630,7 +3630,7 @@ require.alias("pulsar/dist/main.js", "pulsar/index.js");
 if (typeof exports == "object") {
   module.exports = require("pulsar");
 } else if (typeof define == "function" && define.amd) {
-  define(function(){ return require("pulsar"); });
+  define(require("pulsar"));
 } else {
   window["Pulsar"] = require("pulsar");
 }})();
