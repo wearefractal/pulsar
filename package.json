@@ -12,13 +12,13 @@
       "protosock":"*"
    },
    "devDependencies":{
-      "mocha":"*",
+      "mocha":">= 1.9",
       "should":"*",
       "connect":"*",
       "uglify-js":"*"
    },
    "scripts":{
-      "test":"mocha --compilers coffee:coffee-script --ignore-leaks --reporter spec"
+      "test":"mocha --compilers coffee:coffee-script --reporter spec"
    },
    "engines":{
       "node":">= 0.6"
